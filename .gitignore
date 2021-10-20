@@ -1,2 +1,3 @@
 .DS_Store
-radiance-quantifier/__pycache__
+radianceQuantifier/__pycache__
+radianceQuantifier/misc

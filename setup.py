@@ -1,0 +1,53 @@
+#! /usr/bin/env python3
+from setuptools import setup,find_packages
+    
+install_requires = [
+'opencv_python',
+'colorcet',
+'hdbscan',
+'scipy',
+'tqdm',
+'numpy',
+'pandas',
+'pytesseract',
+'matplotlib',
+'seaborn',
+'Pillow',
+'plateypus',
+'scikit_learn',
+'importlib_metadata'
+]
+
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+    'Operating System :: Unix',
+    'Operating System :: MacOS :: MacOS X',
+    'Intended Audience :: Science/Research'
+]
+
+# read the contents of your README file
+from os import path
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
+setup(
+    name="radianceQuantifier",
+    version="0.1.1",
+    author = "Sooraj Achar",
+    author_email = "acharsr@nih.gov",
+    description = "Automatically crops mice and quantifies their tumor luminescences from raw IVIS images",
+    long_description = long_description,
+    long_description_content_type = "text/markdown",
+    url = "https://github.com/soorajachar/radianceQuantifier",
+    classifiers = classifiers,
+    packages=find_packages(),
+    install_requires=install_requires,
+    include_package_data=True,
+    entry_points={
+        "console_scripts": [
+            "radianceQuantifier = radianceQuantifier.__main__:main"
+        ]
+    },
+)

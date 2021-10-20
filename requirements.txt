@@ -1,0 +1,14 @@
+opencv_python==4.4.0.44
+colorcet==2.0.6
+hdbscan==0.8.26
+scipy==1.7.1
+tqdm==4.62.2
+numpy==1.21.1
+pandas==1.2.4
+plateypus.egg==info
+pytesseract==0.3.6
+matplotlib==3.4.2
+seaborn==0.11.2
+Pillow==8.4.0
+plateypus==0.3.9
+scikit_learn==1.0

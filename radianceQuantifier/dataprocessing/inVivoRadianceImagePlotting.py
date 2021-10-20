@@ -9,14 +9,6 @@ import os,pickle,sys,shutil
 from sklearn.preprocessing import MinMaxScaler
 sns.set_context('talk')
 
-#For loading in files directly from google drive
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
-from google.colab import auth
-from oauth2client.client import GoogleCredentials
-from google.colab import drive as outputDrive
-import gspread
-
 #Image processing packages
 # from matplotlib import image as mplImage
 # import pytesseract

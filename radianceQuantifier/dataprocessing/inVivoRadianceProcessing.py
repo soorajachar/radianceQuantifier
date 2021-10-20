@@ -419,7 +419,8 @@ def fullySeparateMice(luminescentSamples,brightfieldSamples,originalBrightfieldS
 
     return splitMice,splitBrightfields
 
-def returnRadianceMetrics(imageTitle,imagePath,samples,splitBrightfields,colorScale,linearScale,trueMin,sampleNames=[],save_pixel_df=False,visualize=False):            
+def returnRadianceMetrics(imageTitle,samples,splitBrightfields,colorScale,linearScale,trueMin,sampleNames=[],save_pixel_df=False,visualize=False):            
+    outputDir = 'outputData/'
     statisticList = []
     if len(sampleNames) == 0:
         sampleNames = list(map(str,list(range(1,len(samples)+1))))
@@ -451,7 +452,7 @@ def returnRadianceMetrics(imageTitle,imagePath,samples,splitBrightfields,colorSc
               pixelRadianceAndBrightfieldDf = pd.concat([pixelIntensityDf.stack(),pixelRadianceDf.stack(),pixelBrightfieldDf.stack()],axis=1,keys=['Intensity','Radiance','Brightfield'])
               pixelDfList.append(pixelRadianceAndBrightfieldDf)
           else:
-           imageMatrixPath = '/'.join(imagePath[:-1].split('/')[:-1] + ['imageMatrices'])+'/'
+           imageMatrixPath = outputDir+'imageMatrices/'
            np.save(imageMatrixPath+'-'.join([imageTitle,sampleNames[sn]]),np.dstack([radianceMatrix,brightfieldMatrix,splitBrightfields[sn]]))
            with open(imageMatrixPath+'-'.join([imageTitle,sampleNames[sn]])+'.pkl','wb') as f:
                pickle.dump([trueMin,linearScale[-1]],f)
@@ -490,6 +491,8 @@ def returnRadianceMetrics(imageTitle,imagePath,samples,splitBrightfields,colorSc
 
     if visualize:
       pixelDf = pd.concat(pixelDfList,keys=sampleNames,names=['Sample'])
+      if 'processedImages' not in os.listdir(outputDir):
+        os.mkdir(outputDir+'processedImages')
     else:
       pixelDf = []
     statisticMatrix = np.matrix(statisticList)
@@ -526,12 +529,12 @@ def returnRadianceMetrics(imageTitle,imagePath,samples,splitBrightfields,colorSc
             
       fig.suptitle(imageTitle)
       fig.subplots_adjust(top=0.85)
-      fig.savefig(imagePath+imageTitle+'.png',bbox_inches='tight')
+      fig.savefig(outputDir+'processedImages'+imageTitle+'.png',bbox_inches='tight')
       plt.close()
     
     return statisticDf
 
-def processGroupedMouseImage(imageTitle,imagePath,luminescent,brightfield,brightfield2,visualize=False,save_pixel_df=False,sampleNames = [],save_images=False):
+def processGroupedMouseImage(imageTitle,luminescent,brightfield,brightfield2,visualize=False,save_pixel_df=False,sampleNames = [],save_images=False):
     
     #Preprocess images
     luminescentSamples,colorBar,legend,colorBarScale = returnLuminescentImageComponents(luminescent,visualize=visualize)
@@ -546,21 +549,21 @@ def processGroupedMouseImage(imageTitle,imagePath,luminescent,brightfield,bright
     splitMice,splitBrightfields = fullySeparateMice(luminescentSamples,brightfieldSamples,originalBrightfieldSamples,verticalBreakpoints,horizontalBreakpoints,visualize=visualize)
     
     #Create radiance statistic dataframe and pixel-wise radiance dataframe
-    radianceStatisticDf = returnRadianceMetrics(imageTitle,imagePath,splitMice,splitBrightfields,colorScale,linearScale,trueMin,sampleNames = sampleNames,save_pixel_df=save_pixel_df,visualize=save_images)
+    radianceStatisticDf = returnRadianceMetrics(imageTitle,splitMice,splitBrightfields,colorScale,linearScale,trueMin,sampleNames = sampleNames,save_pixel_df=save_pixel_df,visualize=save_images)
     return radianceStatisticDf,peaks
 
 def addTrueIndexToDataframe(radianceStatisticDf,sampleNameFile):
     matrixList,tupleList = [],[]
     for row in range(sampleNameFile.shape[0]):
-        sampleName = list(sampleNameFile['GroupName'])[row]
-        time = list(sampleNameFile['Time'])[row]
-        sampleStatistics = radianceStatisticDf.xs([sampleName,time],level=['Group','Time'])
+        sampleName = list(sampleNameFile['Group'])[row]
+        time = list(sampleNameFile['Day'])[row]
+        sampleStatistics = radianceStatisticDf.xs([sampleName,time],level=['Group','Day'])
         matrixList.append(sampleStatistics.values)
         for sample in sampleStatistics.index.unique('Sample'):
           tupleList.append(sampleNameFile.iloc[row,:].values.tolist()+[sample])
 
     fullMatrix = np.vstack(matrixList)
-    multiIndex = pd.MultiIndex.from_tuples(tupleList,names=list(sampleNameFile.columns)+['Sample']).droplevel('GroupName')
+    multiIndex = pd.MultiIndex.from_tuples(tupleList,names=list(sampleNameFile.columns)+['Sample']).droplevel('Group')
     completeDf = pd.DataFrame(fullMatrix,index=multiIndex,columns=radianceStatisticDf.columns)
     if 'SampleNames' in completeDf.index.names:
         completeDf = completeDf.droplevel('SampleNames')
@@ -569,9 +572,9 @@ def addTrueIndexToDataframe(radianceStatisticDf,sampleNameFile):
 def addTrueIndexToPixelDataframe(radiancePixelDf,sampleNameFile):
     matrixList,tupleList = [],[]
     for row in range(sampleNameFile.shape[0]):
-        sampleName = list(sampleNameFile['GroupName'])[row]
-        time = list(sampleNameFile['Time'])[row]
-        sampleStatistics = radiancePixelDf.xs([sampleName,time],level=['Group','Time'])
+        sampleName = list(sampleNameFile['Group'])[row]
+        time = list(sampleNameFile['Day'])[row]
+        sampleStatistics = radiancePixelDf.xs([sampleName,time],level=['Group','Day'])
         matrixList.append(sampleStatistics.values)
         for sample in sampleStatistics.index.unique('Sample'):
           sampleDf = sampleStatistics.query("Sample == @sample").reset_index()
@@ -579,28 +582,30 @@ def addTrueIndexToPixelDataframe(radiancePixelDf,sampleNameFile):
             tupleList.append(sampleNameFile.iloc[row,:].values.tolist()+[sample,sampleDf['Row'][i],sampleDf['Column'][i]])
 
     fullMatrix = np.vstack(matrixList)
-    multiIndex = pd.MultiIndex.from_tuples(tupleList,names=list(sampleNameFile.columns)+['Sample','Row','Column']).droplevel('GroupName')
+    multiIndex = pd.MultiIndex.from_tuples(tupleList,names=list(sampleNameFile.columns)+['Sample','Row','Column']).droplevel('Group')
     completeDf = pd.DataFrame(fullMatrix,index=multiIndex,columns=radiancePixelDf.columns)
     if 'SampleNames' in completeDf.index.names:
         completeDf = completeDf.droplevel('SampleNames')
     return completeDf
 
-def luminescentBrightfieldMatchCheck(sampleNameFile,base_dir,save_pixel_df=False):
-  days = [x for x in pd.unique(sampleNameFile['Time'])]
+def luminescentBrightfieldMatchCheck(sampleNameFile,save_pixel_df=False):
+  
+  inputDir = 'inputData/'
+  outputDir = 'outputData/'
+  print(sampleNameFile)
+  days = [x for x in pd.unique(sampleNameFile['Day'])]
 
   unmatchedGroups = []
   if save_pixel_df:
-    if 'imageMatrices' not in os.listdir(base_dir):
-      os.mkdir(base_dir+'imageMatrices')    
+    if 'imageMatrices' not in os.listdir(outputDir):
+      os.mkdir(outputDir+'imageMatrices')    
     
-  if 'processedImages' not in os.listdir(base_dir):
-    os.mkdir(base_dir+'processedImages')
   for i in range(len(days)):
       day = days[i]
-      tempDf = sampleNameFile.query("Time == @day")
-      groups = list(pd.unique([x for x in pd.unique(tempDf['GroupName'])]))
-      luminescentImages = [x.split('.')[0][0] for x in os.listdir(base_dir+'luminescent/'+day+'/') if '.DS' not in x]
-      brightfieldImages = [x.split('.')[0][0] for x in os.listdir(base_dir+'brightfield/'+day+'/') if '.DS' not in x]
+      tempDf = sampleNameFile.query("Day == @day")
+      groups = list(pd.unique([x for x in pd.unique(tempDf['Group'])]))
+      luminescentImages = [x.split('.')[0][0] for x in os.listdir(inputDir+'luminescent/'+day+'/') if '.DS' not in x]
+      brightfieldImages = [x.split('.')[0][0] for x in os.listdir(inputDir+'brightfield/'+day+'/') if '.DS' not in x]
       for j in range(len(groups)):
           group = groups[j]
           if group not in luminescentImages or group not in brightfieldImages:
@@ -610,7 +615,9 @@ def luminescentBrightfieldMatchCheck(sampleNameFile,base_dir,save_pixel_df=False
               unmatchedGroups.append('brightfield/'+day+'/'+group)
   return unmatchedGroups
 
-def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,base_dir,save_pixel_df=False):
+def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixel_df=False):
+    base_dir = 'outputData/'
+
     clusterer = hdbscan.HDBSCAN(min_cluster_size=int(len(allPeaks)*0.1))
     cluster_labels = clusterer.fit_predict(np.array(allPeaks).reshape(-1,1))
     cluster_labels = [str(x+1) for x in cluster_labels]  
@@ -639,8 +646,8 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,base_dir,
     fullDfList = []
     splitGroups = [',,'.join(x.split(',,')[:2]) for x in fullSplitGroupDict]
     matrixRenamingDict = {}
-    for currentDay in newFullDf.index.unique('Time'):
-        dayDf = newFullDf.query("Time == @currentDay")
+    for currentDay in newFullDf.index.unique('Day'):
+        dayDf = newFullDf.query("Day == @currentDay")
         for currentGroup in dayDf.index.unique('Group'):
             indexingKey = ',,'.join([currentDay,currentGroup])
             if indexingKey in splitGroups:
@@ -658,19 +665,19 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,base_dir,
                     splitKey = key.split(',,')
                     day,group,samples = splitKey[0],splitKey[1],splitKey[2].split(',')
                     renamingPositions = fullSplitGroupDict[key]
-                    subsetDf = newFullDf.query("Time == @day and Group == @group and Position == @samples").query("Sample == @renamingPositions")
+                    subsetDf = newFullDf.query("Day == @day and Group == @group and Position == @samples").query("Sample == @renamingPositions")
                     for position,renamedPosition in zip(subsetDf.index.unique('Position'),renamingPositions):
                         splitPositionDict[splitKey[2]]+=1
-                        trueIndex = newFullDf.query("Time == @day and Group == @group and Position == @samples").index.unique('Sample').tolist().index(renamedPosition)
+                        trueIndex = newFullDf.query("Day == @day and Group == @group and Position == @samples").index.unique('Sample').tolist().index(renamedPosition)
                         matrixRenamingDict['-'.join([currentDay,currentGroup,renamedPosition])] = '-'.join([currentDay,currentGroup+','.join(renamingPositions),str(trueIndex+1)])
                     subsetDfList.append(subsetDf)
                 renamedEntry = pd.concat(subsetDfList).sort_values(by=['Sample'])
             else:
-                renamedEntry = newFullDf.query("Time == @currentDay and Group == @currentGroup")
+                renamedEntry = newFullDf.query("Day == @currentDay and Group == @currentGroup")
                 for position,renamedPosition in zip(renamedEntry.index.unique('Position'),renamedEntry.index.unique('Sample')):
                     matrixRenamingDict['-'.join([currentDay,currentGroup,renamedPosition])] = '-'.join([currentDay,currentGroup,position])
             if 'SampleNames' in sampleNameFile.columns:
-                sampleNameVal = sampleNameFile[(sampleNameFile["Time"] == currentDay) & (sampleNameFile["GroupName"] == currentGroup)]['SampleNames'].values[0]
+                sampleNameVal = sampleNameFile[(sampleNameFile["Day"] == currentDay) & (sampleNameFile["Group"] == currentGroup)]['SampleNames'].values[0]
                 if not pd.isna(sampleNameVal) and sampleNameVal != '':
                     renamingDict = {}
                     for oldSampleName,newSampleName in zip(renamedEntry.index.unique('Sample').tolist(),sampleNameVal.split(',')):
@@ -689,8 +696,9 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,base_dir,
             minScaleDict[savezKey] = pickle.load(open(base_dir+'imageMatrices/'+oldFileName+'.pkl','rb'))
         
         #Save concatenated files
-        np.savez_compressed(base_dir+base_dir.split('/')[-2]+'-pixel',**savezDict)
-        with open(base_dir+base_dir.split('/')[-2]+'-minScale.pkl','wb') as f:
+        experimentName = os.getcwd().split('/')[-1]
+        np.savez_compressed(base_dir+experimentName+'-pixel',**savezDict)
+        with open(base_dir+experimentName+'-minScale.pkl','wb') as f:
             pickle.dump(minScaleDict,f)
         #Delete temporary directory
         shutil.rmtree(base_dir+'imageMatrices/')
@@ -698,7 +706,8 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,base_dir,
     fullDf = pd.concat(fullDfList)    
     return fullDf
 
-def checkSplitGroups(base_dir,day,group,allPeaks,sampleNames=[],visualize=False,save_df=True,save_pixel_df=False,save_images=False):
+def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=True,save_pixel_df=False,save_images=False):
+    base_dir = 'inputData/'
     luminescentImages = sorted([x.split('.')[0] for x in os.listdir(base_dir+'luminescent/'+day+'/') if len(x.split('.')[0]) > 1 and group in x.split('.')[0]])
     brightfieldImages = sorted([x.split('.')[0] for x in os.listdir(base_dir+'brightfield/'+day+'/') if len(x.split('.')[0]) > 1 and group in x.split('.')[0]])
     splitGroupDict = {}
@@ -722,7 +731,7 @@ def checkSplitGroups(base_dir,day,group,allPeaks,sampleNames=[],visualize=False,
                 brightfield = mplImage.imread(fileName)
                 brightfield2 = cv2.imread(fileName)        
                 positionsToKeep = splitLuminescentFileName[1:].split(',')
-                groupDf,groupPeaks = processGroupedMouseImage(day+'-'+splitLuminescentFileName,base_dir+'processedImages/',luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
+                groupDf,groupPeaks = processGroupedMouseImage(day+'-'+splitLuminescentFileName,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
                 if splitIndex != 0:
                     originalSamples = groupDf.index.unique('Sample').tolist()
                     newSamples = [str(int(x)+splitIndex) for x in originalSamples]
@@ -758,27 +767,28 @@ def checkSplitGroups(base_dir,day,group,allPeaks,sampleNames=[],visualize=False,
           fileName = base_dir+'brightfield/'+day+'/'+group+'.TIF'
         brightfield = mplImage.imread(fileName)
         brightfield2 = cv2.imread(fileName)        
-        groupDf,groupPeaks = processGroupedMouseImage(day+'-'+group,base_dir+'processedImages/',luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
+        groupDf,groupPeaks = processGroupedMouseImage(day+'-'+group,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
         return groupDf,groupPeaks,splitGroupDict
             
-def fullInVivoImageProcessingPipeline(sampleNameFile,base_dir,visualize=False,save_df=True,save_pixel_df=False,save_images=False):
-  unmatchedGroups = luminescentBrightfieldMatchCheck(sampleNameFile,base_dir,save_pixel_df=save_pixel_df)
+def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=True,save_pixel_df=False,save_images=False):
+  outputDir = 'outputData/'
+  unmatchedGroups = luminescentBrightfieldMatchCheck(sampleNameFile,save_pixel_df=save_pixel_df)
   if len(unmatchedGroups) == 0:
-    days = [x for x in pd.unique(sampleNameFile['Time'])]
+    days = [x for x in pd.unique(sampleNameFile['Day'])]
 
     dayDfList,dayPixelDfList,dayPeaksList = [],[],[]
     fullSplitGroupDict = {}
     for i in trange(len(days), desc='Processing Days:'):
         day = days[i]
         groupDfList,groupPixelDfList = [],[]
-        tempDf = sampleNameFile.query("Time == @day")
-        groups = list(pd.unique([x for x in pd.unique(tempDf['GroupName'])]))
+        tempDf = sampleNameFile.query("Day == @day")
+        groups = list(pd.unique([x for x in pd.unique(tempDf['Group'])]))
         #print(day)
         for j in trange(len(groups), desc='Processing Groups:',leave=False):
             group = groups[j]
             sampleNames = []
             
-            groupDf,groupPeaks,splitGroupDict = checkSplitGroups(base_dir,day,group,dayPeaksList,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
+            groupDf,groupPeaks,splitGroupDict = checkSplitGroups(day,group,dayPeaksList,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
             groupDfList.append(groupDf)
             dayPeaksList+=groupPeaks
             fullSplitGroupDict = {**fullSplitGroupDict,**splitGroupDict}
@@ -786,18 +796,21 @@ def fullInVivoImageProcessingPipeline(sampleNameFile,base_dir,visualize=False,sa
         dayDf = pd.concat(groupDfList,keys=groups,names=['Group'])
         dayDfList.append(dayDf)
 
-    outputFileName = base_dir.split('/')[-2]
+    experimentName = os.getcwd().split('/')[-1]
+    outputFileName = 'radianceStatisticPickleFile-'+experimentName
     if 'SampleNames' not in tempDf.columns:
         sampleNamesColumn = []
     else:
         sampleNamesColumn = sampleNameFile['SampleNames'].tolist()
     
-    fullDf = pd.concat(dayDfList,keys=days,names=['Time'])
-    fullDf = amendSampleNames(fullDf,dayPeaksList,sampleNameFile,fullSplitGroupDict,base_dir,save_pixel_df=save_pixel_df)
+    fullDf = pd.concat(dayDfList,keys=days,names=['Day'])
+    fullDf = amendSampleNames(fullDf,dayPeaksList,sampleNameFile,fullSplitGroupDict,save_pixel_df=save_pixel_df)
     radianceStatisticDf = addTrueIndexToDataframe(fullDf,sampleNameFile)
+    radianceStatisticDf['Time'] = [int(x[1:]) for x in radianceStatisticDf.index.get_level_values('Day').tolist()]
+    radianceStatisticDf = radianceStatisticDf.set_index(['Time'],append=True)
     if save_df:
-      radianceStatisticDf.to_pickle(base_dir+outputFileName+'.pkl')
-      radianceStatisticDf.to_excel(base_dir+outputFileName+'.xlsx')    
+      radianceStatisticDf.to_pickle(outputDir+outputFileName+'.pkl')
+      radianceStatisticDf.to_excel(outputDir+outputFileName+'.xlsx')    
     return radianceStatisticDf
   else:
     print('These images are missing:\n')
@@ -997,14 +1010,14 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
             minScale = list(minScaleDict.values())[0]
     
     return fullMatrix,[min(minList),max(maxList)]
-        
+
 def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle=''):
 
     fontDict = {}
     for param,paramVal in zip(['fontname','fontsize'],[font,fontsize]):
         if paramVal != '':
             fontDict[param] = paramVal
-    
+
     kwargDict = {'row':row,'col':col,'innerRow':innerRow,'innerCol':innerCol}
     kwargLenDict,kwargValsDict = {},{}
     for kwarg in kwargDict:
@@ -1014,12 +1027,12 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
             if kwargDict[kwarg] == 'Sample':
                 kwargValsDict[kwarg] = sorted(selectionKeysDf.index.unique(kwargDict[kwarg]).tolist())
             else:
-                kwargValsDict[kwarg] = selectionKeysDf.index.unique(kwargDict[kwarg]).tolist()  
+                kwargValsDict[kwarg] = selectionKeysDf.index.unique(kwargDict[kwarg]).tolist()
         else:
             kwargLenDict[kwarg] = 1
             kwargValsDict[kwarg] = ['']
-            kwargDict[kwarg] = ''    
-    
+            kwargDict[kwarg] = ''
+
     if kwargLenDict['row'] == 1 or kwargLenDict['col'] == 1:
         twoDaxes = False
     else:
@@ -1060,14 +1073,14 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
                 newKey = newSelectionKeysDf.iloc[rowIndex,0]
                 concatenatedImage,minScale = concatenateImage(pMatrixDict,minScaleDict,keysToCombine,kwargDict,kwargValsDict,unifiedPaddingShape=unifiedPaddingShape)
                 newPmatrixDict[newKey] = concatenatedImage
-            
+
         selectionKeysDf = newSelectionKeysDf.copy()
         pMatrixDict = newPmatrixDict.copy()
         minScaleDict = newMinScaleDict.copy()
     else:
         wspace = None
         hspace=None
-    
+
     plottedParameterIndices = [list(selectionKeysDf.index.names).index(x) for x in selectionKeysDf.index.names if x in [kwargDict['row'],kwargDict['col']]]
     plottedParameterTuples = []
     for indexTuple in selectionKeysDf.values[:,0].tolist():
@@ -1075,8 +1088,8 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
         indexTupleList = indexTuple.split('-')
         for index in plottedParameterIndices:
             tempList.append(indexTupleList[index])
-        plottedParameterTuples.append(set(tempList))    
-    
+        plottedParameterTuples.append(set(tempList))
+
     fig, axes = plt.subplots(kwargLenDict['row'],kwargLenDict['col'],figsize=(2.5*kwargLenDict['col']*kwargLenDict['innerCol']*0.5,4.55*kwargLenDict['row']*kwargLenDict['innerRow']))
     fig.subplots_adjust(right=0.8)
 
@@ -1086,7 +1099,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
         fig.subplots_adjust(top=1-0.25/kwargLenDict['row'],wspace=wspace)
     else:
         fig.subplots_adjust(wspace=wspace,hspace=hspace)
-    
+
     fontDict2 = fontDict.copy()
     fontDict2['fontweight'] = 'bold'
     if 'fontsize' in fontDict2:
@@ -1117,15 +1130,15 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
                 axbox1 = axes[0,int(kwargLenDict['col']/2)].get_position().extents
             else:
                 axbox1 = axes[int(kwargLenDict['col']/2)].get_position().extents
-            middleXPos = 0.5*(axbox1[0] + axbox1[2])   
+            middleXPos = 0.5*(axbox1[0] + axbox1[2])
         bottomYPos = axbox1[3]
         a2 = plt.figtext(middleXPos,bottomYPos,kwargDict['col']+'\n',horizontalalignment='center',verticalalignment='bottom',**fontDict2)
         levelTitles.append(a2)
-        
+
     barWidth = colorbarScale*0.02*(2/len(kwargValsDict['col']))
     barHeight = colorbarScale*0.8*(1/len(kwargValsDict['row']))
-    cbar_ax = fig.add_axes([0.86-0.005*len(kwargValsDict['col']), 0.5-(0.1+barHeight/2)+0.1, barWidth, barHeight])    
-    
+    cbar_ax = fig.add_axes([0.86-0.005*len(kwargValsDict['col']), 0.5-(0.1+barHeight/2)+0.1, barWidth, barHeight])
+
     #cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
     cmap = sns.color_palette(cmap, as_cmap=True)
     for r,rowVal in enumerate(kwargValsDict['row']):
@@ -1140,7 +1153,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
             else:
                 plottedParameterList = [rowVal,colVal]
                 axes[r,c].axis('off')
-                
+
             if set(plottedParameterList) in plottedParameterTuples:
                 plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
             else:
@@ -1166,18 +1179,19 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
     cbar_ax.set_frame_on(True)
     cbar_ax.tick_params(which='both',width=colorbarScale*1.5)
     if fontsize != '':
-        cbar_ax.yaxis.label.set_fontsize(fontsize)            
+        cbar_ax.yaxis.label.set_fontsize(fontsize)
         for l in cbar_ax.yaxis.get_ticklabels():
             l.set_fontsize(fontsize)
     if font != '':
-        cbar_ax.yaxis.label.set_family(font)            
+        cbar_ax.yaxis.label.set_family(font)
         for l in cbar_ax.yaxis.get_ticklabels():
             l.set_family(font)
-    if save_image:        
+    if save_image:
         paramTitleList = []
         for param in kwargDict:
             if kwargDict[param] != '':
                 paramTitleList.append('-'.join([param,kwargDict[param]]))
         paramTitle = '_'.join(paramTitleList)
-        imageTitle = '_'.join(['mouseImage',image_dir.split('/')[-2],imageTitle,paramTitle])
-        fig.savefig(image_dir+'processedImages/'+imageTitle+'.png',bbox_extra_artists=(cbar_ax,*levelTitles),bbox_inches='tight')        
+        experimentName = os.getcwd().split('/')[-1]
+        imageTitle = '_'.join(['mouseImage',experimentName,imageTitle,paramTitle])
+        fig.savefig('plots/'+imageTitle+'.png',bbox_extra_artists=(cbar_ax,*levelTitles),bbox_inches='tight')
