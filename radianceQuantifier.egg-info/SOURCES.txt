@@ -4,6 +4,7 @@ README.md
 setup.py
 radianceQuantifier/__init__.py
 radianceQuantifier/__main__.py
+radianceQuantifier/radianceQuantifierLogo.png
 radianceQuantifier.egg-info/PKG-INFO
 radianceQuantifier.egg-info/SOURCES.txt
 radianceQuantifier.egg-info/dependency_links.txt
