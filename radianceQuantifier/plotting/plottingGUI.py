@@ -155,12 +155,13 @@ class MouseImageSelectionPage(tk.Frame):
         projectName = os.getcwd().split('/')[(-2)]
         experimentName = os.getcwd().split('/')[(-1)]
         templatePath = templatePathDict[projectName + '/' + experimentName]
+        global sampleNameFile
         if '.csv' in templatePath:
             sampleNameFile = pd.read_csv(templatePath)
         else:
             sampleNameFile = pd.read_excel(templatePath)
         
-        days = pd.unique(sampleNameFile['Time']).tolist()
+        days = pd.unique(sampleNameFile['Day']).tolist()
         groups = pd.unique(sampleNameFile['Group']).tolist()
 
         dayWindow = tk.Frame(mainWindow)
@@ -237,11 +238,15 @@ class MouseGroupRenamingPage(tk.Frame):
         mainWindow.pack(side=tk.TOP,padx=10,pady=(10,0))
         
         groupRenameEntryList = []
+        columnsToKeep = [i for i,x in enumerate(list(sampleNameFile.columns)) if x not in ['Group','Day','SampleNames']]
         for i,selectedGroup in enumerate(selectedGroups):
             tk.Label(mainWindow,text=selectedGroup+' -> ').grid(row=i,column=0,sticky=tk.W)
             e = tk.Entry(mainWindow)
             e.grid(row=i,column=1,sticky=tk.W)
-            e.insert(tk.END, '')
+            indexList = sampleNameFile.query("Group == @selectedGroup").iloc[0,:].values.tolist()
+            indexList = [x for i,x in enumerate(indexList) if i in columnsToKeep]
+            defaultValue = ', '.join(indexList)
+            e.insert(tk.END, defaultValue)
             groupRenameEntryList.append(e)
         
         def collectInputs():

@@ -17,10 +17,9 @@ class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
 
-        self.title('plateypus '+version('plateypus'))
+        self.title('radianceQuantifier '+version('radianceQuantifier'))
         self._frame = None
         self.homedirectory = '/'.join(os.path.abspath(radianceQuantifier.__file__).split('/')[:-1])
-        print(self.homedirectory)
         if self.homedirectory[-1] != '/':
             self.homedirectory+='/'
         print('radianceQuantifier location: '+self.homedirectory)
