@@ -4,6 +4,7 @@ import tkinter as tk
 import tkinter.ttk
 import pandas as pd
 from PIL import Image,ImageTk
+from importlib_metadata import version
 
 from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline
 from radianceQuantifier.dataprocessing.miscFunctions import setMaxWidth
@@ -16,11 +17,9 @@ class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
 
-        #self.title('plateypus '+version('plateypus'))
+        self.title('plateypus '+version('plateypus'))
         self._frame = None
-        #TEMPORARY; REMOVE WHEN UPLOADED TO PYPI
-        self.homedirectory = os.getcwd()+'/radianceQuantifier/'
-        #self.homedirectory = '/'.join(os.path.abspath(plateypus.__file__).split('/')[:-1])
+        self.homedirectory = '/'.join(os.path.abspath(radianceQuantifier.__file__).split('/')[:-1])
         if self.homedirectory[-1] != '/':
             self.homedirectory+='/'
         print('radianceQuantifier location: '+self.homedirectory)
