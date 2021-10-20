@@ -9,10 +9,10 @@ conda activate
 ```
 3. Now install radianceQuantifier via PyPi by typing the following line in the terminal:
 ```
-pip install radiance-quantifier
+pip install radianceQuantifier
 ```
 4. In this anaconda environment, type: 
 ```
-python3 -m radiance-quantifier
+python3 -m radianceQuantifier
 ```
 to start the program

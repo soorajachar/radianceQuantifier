@@ -592,7 +592,6 @@ def luminescentBrightfieldMatchCheck(sampleNameFile,save_pixel_df=False):
   
   inputDir = 'inputData/'
   outputDir = 'outputData/'
-  print(sampleNameFile)
   days = [x for x in pd.unique(sampleNameFile['Day'])]
 
   unmatchedGroups = []
