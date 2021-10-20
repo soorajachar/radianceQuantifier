@@ -273,9 +273,10 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         subsetMatrix,selectionKeysDf,selectionTitle = selectMatrices(pixelMatrix,days=selectedDays,groups=selectedGroups)
 
         tk.Label(mainWindow,text='Color map:').grid(row=0,column=0,sticky=tk.W)
-        cmapEntry = tk.Entry(mainWindow)
+        defaultCmaps = ['turbo','viridis','plasma','inferno','magma','cividis']
+        cmapEntry = tkinter.ttk.Combobox(mainWindow,values=defaultCmaps)
         cmapEntry.grid(row=0,column=1,sticky=tk.W)
-        cmapEntry.insert(tk.END, 'magma')
+        cmapEntry.set(defaultCmaps[0])
 
         tk.Label(mainWindow,text='Font size:').grid(row=1,column=0,sticky=tk.W)
         fontSizeEntry = tk.Entry(mainWindow)
