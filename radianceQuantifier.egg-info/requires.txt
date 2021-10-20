@@ -1,0 +1,14 @@
+opencv_python
+colorcet
+hdbscan
+scipy
+tqdm
+numpy
+pandas
+pytesseract
+matplotlib
+seaborn
+Pillow
+plateypus
+scikit_learn
+importlib_metadata

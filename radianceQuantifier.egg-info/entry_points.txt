@@ -1,0 +1,3 @@
+[console_scripts]
+radianceQuantifier = radianceQuantifier.__main__:main
+

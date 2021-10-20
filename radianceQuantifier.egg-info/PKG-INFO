@@ -1,0 +1,37 @@
+Metadata-Version: 2.1
+Name: radianceQuantifier
+Version: 0.1.1
+Summary: Automatically crops mice and quantifies their tumor luminescences from raw IVIS images
+Home-page: https://github.com/soorajachar/radianceQuantifier
+Author: Sooraj Achar
+Author-email: acharsr@nih.gov
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Operating System :: Unix
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Intended Audience :: Science/Research
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+
+A image processing pipeline to automatically crop and quantify tumor burdens (radiance) in mice treated with bioluminescent tumors.   
+Intutitive processing of quantitative radiance data and raw mouse images is supported through a user friendly GUI interface.
+ 
+To use this package:
+1. If anaconda is not installed, follow installation instructions here: https://docs.anaconda.com/anaconda/install/
+2. Start terminal, type in and enter:
+```
+conda activate
+```
+3. Now install radianceQuantifier via PyPi by typing the following line in the terminal:
+```
+pip install radiance-quantifier
+```
+4. In this anaconda environment, type: 
+```
+python3 -m radiance-quantifier
+```
+to start the program
+
+
