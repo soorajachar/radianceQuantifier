@@ -5,12 +5,12 @@ import tkinter.ttk
 import pandas as pd
 from PIL import Image,ImageTk
 from importlib_metadata import version
-
 from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline
 from radianceQuantifier.dataprocessing.miscFunctions import setMaxWidth
 from radianceQuantifier.setup.experimentCreationGUI import NewExperimentWindow,NewProjectWindow,RemoveProjectWindow
 from radianceQuantifier.setup.experimentSetupGUI import ExperimentSetupStartPage
 from radianceQuantifier.plotting.plottingGUI import PlotExperimentWindow 
+import radianceQuantifier
 
 #Root class; handles frame switching in gui
 class MainApp(tk.Tk):
