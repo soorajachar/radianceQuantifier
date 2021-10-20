@@ -20,6 +20,7 @@ class MainApp(tk.Tk):
         self.title('plateypus '+version('plateypus'))
         self._frame = None
         self.homedirectory = '/'.join(os.path.abspath(radianceQuantifier.__file__).split('/')[:-1])
+        print(self.homedirectory)
         if self.homedirectory[-1] != '/':
             self.homedirectory+='/'
         print('radianceQuantifier location: '+self.homedirectory)
@@ -40,9 +41,9 @@ class RadianceQuantifierHomePage(tk.Frame):
         mainWindow = tk.Frame(self)
         mainWindow.pack(side=tk.TOP,padx=10)
         
-        load = Image.open(master.homedirectory+"docs/radianceQuantifierLogo.png")
+        load = Image.open(master.homedirectory+"radianceQuantifierLogo.png")
         width, height = load.size
-        SCALEFACTOR = 0.4
+        SCALEFACTOR = 0.3
         load = load.resize((int(SCALEFACTOR*width), int(SCALEFACTOR*height)), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         img = tk.Label(mainWindow, image=render)

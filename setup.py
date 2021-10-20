@@ -34,7 +34,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name="radianceQuantifier",
-    version="0.1.4",
+    version="0.1.5",
     author = "Sooraj Achar",
     author_email = "acharsr@nih.gov",
     description = "Automatically crops mice and quantifies their tumor luminescences from raw IVIS images",
