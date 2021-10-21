@@ -2,12 +2,13 @@
 from setuptools import setup,find_packages
     
 install_requires = [
+'joblib>=1.1.0',
+'numpy>=1.21.1',
 'opencv_python',
 'colorcet',
 'hdbscan',
 'scipy',
 'tqdm',
-'numpy',
 'pandas',
 'pytesseract',
 'matplotlib',
@@ -15,7 +16,6 @@ install_requires = [
 'Pillow',
 'plateypus',
 'scikit_learn',
-'importlib_metadata'
 ]
 
 classifiers = [
@@ -34,7 +34,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name="radianceQuantifier",
-    version="0.1.8",
+    version="0.1.9",
     author = "Sooraj Achar",
     author_email = "acharsr@nih.gov",
     description = "Automatically crops mice and quantifies their tumor luminescences from raw IVIS images",

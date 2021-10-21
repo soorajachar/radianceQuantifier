@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: radianceQuantifier
-Version: 0.1.7
+Version: 0.1.8
 Summary: Automatically crops mice and quantifies their tumor luminescences from raw IVIS images
 Home-page: https://github.com/soorajachar/radianceQuantifier
 Author: Sooraj Achar
@@ -26,11 +26,11 @@ conda activate
 ```
 3. Now install radianceQuantifier via PyPi by typing the following line in the terminal:
 ```
-pip install radiance-quantifier
+pip install radianceQuantifier
 ```
 4. In this anaconda environment, type: 
 ```
-python3 -m radiance-quantifier
+python3 -m radianceQuantifier
 ```
 to start the program
 
