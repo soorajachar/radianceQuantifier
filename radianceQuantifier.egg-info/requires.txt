@@ -1,9 +1,10 @@
+joblib>=1.1.0
+numpy>=1.21.1
 opencv_python
 colorcet
 hdbscan
 scipy
 tqdm
-numpy
 pandas
 pytesseract
 matplotlib
@@ -11,4 +12,3 @@ seaborn
 Pillow
 plateypus
 scikit_learn
-importlib_metadata

@@ -1,6 +1,6 @@
-build/
+build
 dist/
-radianceQuantifier.egg-info/
+radianceQuantifier.egg-info
 .pytest_cache/
 **/__pycache__
 .DS_Store
