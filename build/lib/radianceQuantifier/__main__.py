@@ -6,6 +6,7 @@ import pandas as pd
 from PIL import Image,ImageTk
 from importlib_metadata import version
 from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline
+from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf
 from radianceQuantifier.dataprocessing.miscFunctions import setMaxWidth
 from radianceQuantifier.setup.experimentCreationGUI import NewExperimentWindow,NewProjectWindow,RemoveProjectWindow
 from radianceQuantifier.setup.experimentSetupGUI import ExperimentSetupStartPage
@@ -124,21 +125,34 @@ class ExperimentActionWindow(tk.Frame):
             if action == 'se':
                 master.switch_frame(ExperimentSetupStartPage,selectedExperiment,ExperimentActionWindow)
             elif action == 'pd':
-                #Get input df
-                if 'templatePathDict.pkl' in os.listdir(master.homedirectory + 'misc'):
-                    templatePathDict = pickle.load(open(master.homedirectory + 'misc/templatePathDict.pkl', 'rb'))
-                else:
-                    templatePathDict = {}
-                projectName = os.getcwd().split('/')[(-2)]
-                experimentName = os.getcwd().split('/')[(-1)]
-                templatePath = templatePathDict[projectName + '/' + experimentName]
-                if '.csv' in templatePath:
-                    sampleNameFile = pd.read_csv(templatePath)
-                else:
-                    sampleNameFile = pd.read_excel(templatePath)
-                radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True)
-                print(radianceStatisticDf)
-                tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
+                answer = tkinter.messagebox.askokcancel(title='Confirmation',message='Do you want to process all image data?',icon=tkinter.messagebox.WARNING)
+                if answer:
+                    #Get input df
+                    if 'templatePathDict.pkl' in os.listdir(master.homedirectory + 'misc'):
+                        templatePathDict = pickle.load(open(master.homedirectory + 'misc/templatePathDict.pkl', 'rb'))
+                    else:
+                        templatePathDict = {}
+                    projectName = os.getcwd().split('/')[(-2)]
+                    experimentName = os.getcwd().split('/')[(-1)]
+                    templatePath = templatePathDict[projectName + '/' + experimentName]
+                    if '.csv' in templatePath:
+                        sampleNameFile = pd.read_csv(templatePath)
+                    else:
+                        sampleNameFile = pd.read_excel(templatePath)
+
+                    #Radiance df
+                    radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True)
+                    print(radianceStatisticDf)
+                    
+                    #Survival df
+                    #Legacy formatting
+                    subsetDf = radianceStatisticDf.copy()
+                    subsetDf = subsetDf.droplevel('Time')
+                    subsetDf.index.names = [x if x != 'Day' else 'Time' for x in subsetDf.index.names]
+                    #Create ungrouped survival dataframe
+                    survivalDf = createSurvivalDf(subsetDf,[],selectedExperiment,saveDf=True)
+                    
+                    tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
             elif action == 'plt':
                 master.switch_frame(PlotExperimentWindow,selectedExperiment,ExperimentActionWindow)
 
@@ -155,16 +169,3 @@ class ExperimentActionWindow(tk.Frame):
 if __name__== "__main__":
     app = MainApp()
     app.mainloop()
-    #parser = argparse.ArgumentParser()
-    #parser.add_argument("sampleNameFilePath", help="path to sample name file; must be in excel or csv format")
-    #parser.add_argument("imageFilePath", help="path to directory containing radiance images")
-    #args = parser.parse_args()
-    #if '.csv' in args.sampleNameFilePath:
-    #    sampleNameFile = pd.read_csv(sampleNameFilePath)
-    #elif '.xlsx' in args.sampleNameFilePath:
-    #    sampleNameFile = pd.read_excel(sampleNameFilePath)
-    #else:
-    #    print('Error; sample name file must be in excel or csv format. Quitting...')
-    #    sys.exit(0)
-    #radianceStatisticDf = fullInvivoImageProcessingPipeline(sampleNameFile,args.imageFilePath,save_pixel_df=True)
-    #print(radianceStatisticDf)

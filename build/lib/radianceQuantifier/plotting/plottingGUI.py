@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 import tkinter as tk
 import tkinter.ttk
-from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import selectMatrices,plotMouseImages
+from radianceQuantifier.dataprocessing.inVivoRadianceImagePlotting import selectMatrices,plotMouseImages
+from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf,createSurvivalPlot 
 import radianceQuantifier.dataprocessing.miscFunctions as mf
 import radianceQuantifier.plotting.facetPlotLibrary as fpl 
 import radianceQuantifier.plotting.interactiveGUIElements as ipe
@@ -17,7 +18,7 @@ def createLabelDict(df):
     labelDict = {}
     for i in range(fulldf.index.nlevels):
         levelName = fulldf.index.levels[i].name
-        if levelName not in ['Event','event']:
+        if levelName not in ['Event','event',None]:
             labelDict[levelName] = list(pd.unique(fulldf.index.get_level_values(levelName)))
     return labelDict
 
@@ -129,15 +130,248 @@ class PlotExperimentWindow(tk.Frame):
                 pixelMatrix = np.load('outputData/'+folderName+'-pixel.npz')
                 minScaleDict = pickle.load(open('outputData/'+folderName+'-minScale.pkl','rb'))
                 master.switch_frame(MouseImageSelectionPage)
+            #Survival
             else:
-                pass
-        
+                global radianceStatisticDf
+                radianceStatisticDf = pd.read_pickle('outputData/radianceStatisticPickleFile-'+folderName+'.pkl')
+                master.switch_frame(SurvivalGroupSelectionPage)
+
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=tk.TOP,pady=10)
 
         tk.Button(buttonWindow, text="OK",command=lambda: collectInputs()).grid(row=5,column=0)
         tk.Button(buttonWindow, text="Back",command=lambda: master.switch_frame(switchPage,folderName)).grid(row=5,column=1)
         tk.Button(buttonWindow, text="Quit",command=quit).grid(row=5,column=2)
+
+class SurvivalGroupSelectionPage(tk.Frame):
+    def __init__(self, master):
+
+        tk.Frame.__init__(self, master)
+        labelWindow = tk.Frame(self)
+        labelWindow.pack(side=tk.TOP,padx=10,fill=tk.X,expand=True)
+        
+        tk.Label(self,text='Select levels to keep separate in survival plot:',font='Helvetica 18 bold').pack(side=tk.TOP,padx=10,pady=10)
+        
+        checkButtonWindow = tk.Frame(self)
+        checkButtonWindow.pack(side=tk.TOP)
+        mainWindow = tk.Frame(self)
+        mainWindow.pack(side=tk.TOP,padx=10)
+        
+        levelsNotToInclude = ['Sample','Time','Day']
+        trueLabelDict = createLabelDict(radianceStatisticDf.copy().droplevel(['Sample','Time','Day']))
+        
+        levelNameCheckButtons = []
+        checkButtonVariableList = []
+        for levelName,i in zip(trueLabelDict.keys(),range(len(trueLabelDict.keys()))):
+            includeLevelBool = tk.BooleanVar(value=True)
+            cb = tk.Checkbutton(mainWindow, text=levelName,padx = 20, variable=includeLevelBool,onvalue=True)
+            cb.grid(row=i+3,column=1,sticky=tk.W)
+            cb.select()
+            levelNameCheckButtons.append(cb)
+            checkButtonVariableList.append(includeLevelBool)
+        
+        checkAllButton1 = checkUncheckAllButton(checkButtonWindow,levelNameCheckButtons, text='Check All')
+        checkAllButton1.configure(command=checkAllButton1.checkAll)
+        checkAllButton1.pack(side=tk.LEFT)
+        
+        uncheckAllButton1 = checkUncheckAllButton(checkButtonWindow,levelNameCheckButtons, text='Uncheck All')
+        uncheckAllButton1.configure(command=checkAllButton1.uncheckAll)
+        uncheckAllButton1.pack(side=tk.LEFT)
+
+        def collectInputs():
+            includeLevelList = []
+            for checkButtonVariable in checkButtonVariableList:
+                includeLevelList.append(checkButtonVariable.get())
+            global survivalSelectionList,figureLevelList
+            survivalSelectionList,figureLevelList = [],[]
+            for figureLevelBool,levelName in zip(includeLevelList,trueLabelDict):
+                if figureLevelBool:
+                    figureLevelList.append(levelName)
+                else:
+                    survivalSelectionList.append(levelName)
+            master.switch_frame(SelectSurvivalLevelValuesPage)
+
+        buttonWindow = tk.Frame(self)
+        buttonWindow.pack(side=tk.TOP,pady=10)
+
+        tk.Button(buttonWindow, text="OK",command=lambda: collectInputs()).grid(row=5,column=0)
+        tk.Button(buttonWindow, text="Back",command=lambda: master.switch_frame(PlotExperimentWindow,folderName,switchPage)).grid(row=5,column=1)
+        tk.Button(buttonWindow, text="Quit",command=quit).grid(row=5,column=2)
+
+class SelectSurvivalLevelValuesPage(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        
+        levelsNotToInclude = ['Sample','Time','Day']
+        trueLabelDict = createLabelDict(radianceStatisticDf.copy().droplevel(['Sample','Time','Day']))
+        
+        includeLevelValueList = []
+        
+        labelWindow = tk.Frame(self)
+        labelWindow.pack(side=tk.TOP,padx=10,fill=tk.X,expand=True)
+        
+        l1 = tk.Label(labelWindow, text='Which specific level values do you want to include in the figure?',pady=10).grid(row=0,column = 0,columnspan=len(trueLabelDict)*6)
+        levelValueCheckButtonList = []
+        overallCheckButtonVariableList = []
+        checkAllButtonList = []
+        uncheckAllButtonList = []
+        i=0
+        maxNumLevelValues = 0
+        for levelName in trueLabelDict:
+            if len(trueLabelDict[levelName]) > maxNumLevelValues:
+                maxNumLevelValues = len(trueLabelDict[levelName])
+        """BEGIN TEMP SCROLLBAR CODE"""
+        labelWindow1 = tk.Frame(self)
+        labelWindow1.pack(side=tk.TOP,padx=10,fill=tk.X,expand=True)
+        
+        #Make canvas
+        w1 = tk.Canvas(labelWindow1, width=1200, height=400, scrollregion=(0,0,2000,33*maxNumLevelValues))
+
+        #Make scrollbar
+        scr_v1 = tk.Scrollbar(labelWindow1,orient=tk.VERTICAL)
+        scr_v1.pack(side=tk.RIGHT,fill=tk.Y)
+        scr_v1.config(command=w1.yview)
+        #Add scrollbar to canvas
+        w1.config(yscrollcommand=scr_v1.set)
+        
+        scr_v2 = tk.Scrollbar(labelWindow1,orient=tk.HORIZONTAL)
+        scr_v2.pack(side=tk.BOTTOM,fill=tk.X)
+        scr_v2.config(command=w1.xview)
+        w1.config(xscrollcommand=scr_v2.set)
+        w1.pack(fill=tk.BOTH,expand=True)
+        #Make and add frame for widgets inside of canvas
+        #canvas_frame = tk.Frame(w1)
+        labelWindow = tk.Frame(w1)
+        labelWindow.pack()
+        w1.create_window((0,0),window=labelWindow, anchor = tk.NW)
+        """END TEMP SCROLLBAR CODE"""
+        for levelName in trueLabelDict:
+            j=0
+            levelCheckButtonList = []
+            levelCheckButtonVariableList = []
+            levelLabel = tk.Label(labelWindow, text=levelName+':')
+            levelLabel.grid(row=1,column = i*6,sticky=tk.N,columnspan=5)
+            for levelValue in trueLabelDict[levelName]:
+                includeLevelValueBool = tk.BooleanVar()
+                cb = tk.Checkbutton(labelWindow, text=levelValue, variable=includeLevelValueBool)
+                cb.grid(row=j+4,column=i*6+2,columnspan=2,sticky=tk.W)
+                labelWindow.grid_columnconfigure(i*6+3,weight=1)
+                cb.select()
+                levelCheckButtonList.append(cb)
+                levelCheckButtonVariableList.append(includeLevelValueBool)
+                j+=1
+            
+            checkAllButton1 = checkUncheckAllButton(labelWindow,levelCheckButtonList, text='Check All')
+            checkAllButton1.configure(command=checkAllButton1.checkAll)
+            checkAllButton1.grid(row=2,column=i*6,sticky=tk.N,columnspan=3)
+            checkAllButtonList.append(checkAllButton1)
+            
+            uncheckAllButton1 = checkUncheckAllButton(labelWindow,levelCheckButtonList, text='Uncheck All')
+            uncheckAllButton1.configure(command=checkAllButton1.uncheckAll)
+            uncheckAllButton1.grid(row=2,column=i*6+3,sticky=tk.N,columnspan=3)
+            uncheckAllButtonList.append(checkAllButton1)
+
+            levelValueCheckButtonList.append(levelCheckButtonList)
+            overallCheckButtonVariableList.append(levelCheckButtonVariableList)
+            i+=1
+
+        def collectInputs():
+            global survivalLevelValueList
+            survivalLevelValueList = []
+            for checkButtonVariableList in overallCheckButtonVariableList:
+                tempLevelValueList = []
+                for checkButtonVariable in checkButtonVariableList:
+                    tempLevelValueList.append(checkButtonVariable.get())
+                survivalLevelValueList.append(tempLevelValueList)
+            master.switch_frame(AssignSurvivalLevelsToParametersPage)
+        
+        buttonWindow = tk.Frame(self)
+        buttonWindow.pack(side=tk.TOP,pady=10)
+        
+        tk.Button(buttonWindow, text="OK",command=lambda: collectInputs()).grid(row=maxNumLevelValues+4,column=0)
+        tk.Button(buttonWindow, text="Back",command=lambda: master.switch_frame(SurvivalGroupSelectionPage)).grid(row=maxNumLevelValues+4,column=1)
+        tk.Button(buttonWindow, text="Quit",command=lambda: quit()).grid(row=maxNumLevelValues+4,column=2)
+
+class AssignSurvivalLevelsToParametersPage(tk.Frame):
+    
+    def __init__(self, master):
+        plotType = '2d'
+        parameterTypeDict = {
+                'categorical':['Color','Order', 'Row', 'Column','None'],
+                '1d':['Color','Row','Column','None'],
+                '2d':['Marker','Color','Size','Row','Column','None'],
+                '3d':['Row','Column','X Axis Values','Y Axis Values']}
+        
+        tk.Frame.__init__(self, master)
+        levelsNotToInclude = ['Sample','Time','Day']
+        trueLabelDict = createLabelDict(radianceStatisticDf.copy().droplevel(['Sample','Time','Day']))
+        self.parametersSelected = {}
+        mainWindow = tk.Frame(self)
+        mainWindow.pack(side=tk.TOP,padx=10,pady=10)
+        
+        l1 = tk.Label(mainWindow, text='Which plotting parameter do you want to assign to each of your figure levels?',pady=10).grid(row=0,column = 0,columnspan = len(figureLevelList))
+        rblist = []
+        parameterVarList = []
+        for figureLevel,figureLevelIndex in zip(figureLevelList,range(len(figureLevelList))):
+            v = tk.IntVar()
+            temprblist = []
+            levelLabel = tk.Label(mainWindow, text=figureLevel+':')
+            levelLabel.grid(row=1,column=figureLevelIndex,sticky=tk.NW)
+            for plottingParameter,parameterIndex in zip(parameterTypeDict[plotType],range(len(parameterTypeDict[plotType]))):
+                rb = tk.Radiobutton(mainWindow, text=plottingParameter,padx = 20, variable=v, value=parameterIndex)
+                rb.grid(row=parameterIndex+2,column=figureLevelIndex,sticky=tk.NW)
+                temprblist.append(rb)
+            rblist.append(temprblist)
+            parameterVarList.append(v)
+        
+        def createPlot():
+            #Assign plot parameters to level names
+            for parameterVar,levelName in zip(parameterVarList,figureLevelList):
+                if parameterTypeDict[plotType][parameterVar.get()] not in self.parametersSelected.keys():
+                    self.parametersSelected[parameterTypeDict[plotType][parameterVar.get()]] = levelName
+                else:
+                    if not isinstance(self.parametersSelected[parameterTypeDict[plotType][parameterVar.get()]],list):
+                        self.parametersSelected[parameterTypeDict[plotType][parameterVar.get()]] = [self.parametersSelected[parameterTypeDict[plotType][parameterVar.get()]]]+[levelName]
+                    else:
+                        self.parametersSelected[parameterTypeDict[plotType][parameterVar.get()]].append(levelName)
+            
+            #Query dataframe to only subset selected level values survivalSelectionList
+            subsetDf = radianceStatisticDf.copy()
+            for i,level in enumerate(trueLabelDict):
+                booleanLevelValues = survivalLevelValueList[i]
+                levelValues = [x for j,x in enumerate(trueLabelDict[level]) if booleanLevelValues[j]]
+                subsetDf = subsetDf.query(level+" == @levelValues")
+            #Legacy formatting
+            subsetDf = subsetDf.droplevel('Time')
+            subsetDf.index.names = [x if x != 'Day' else 'Time' for x in subsetDf.index.names]
+            #Create titles
+            if len(survivalSelectionList) != 0:
+                outputName = '-'.join([folderName,'groupedBy='+','.join(survivalSelectionList),','.join([k+'='+self.parametersSelected[k] for k in self.parametersSelected if k != 'None'])])
+            else:
+                outputName = '-'.join([folderName,','.join([k+'='+self.parametersSelected[k] for k in self.parametersSelected if k != 'None'])])
+            #Group dataframe correctly
+            survivalDf = createSurvivalDf(subsetDf,survivalSelectionList,outputName,saveDf=False)
+            #Create plot
+            createSurvivalPlot(survivalDf,self.parametersSelected,outputName)
+            tk.messagebox.showinfo(title='Success', message='Plot created!')
+            self.FinishButton.config(state=tk.NORMAL)
+            self.parametersSelected = {}
+
+        def collectInputs():
+            master.switch_frame(PlotExperimentWindow,folderName,switchPage)
+        
+        plotWindow = tk.Frame(self)
+        plotWindow.pack(side=tk.TOP,pady=(10,0))
+        tk.Button(plotWindow, text="Create plot",command=lambda: createPlot()).grid(row=0,column=0)
+
+        buttonWindow = tk.Frame(self)
+        buttonWindow.pack(side=tk.TOP,pady=10)
+        
+        self.FinishButton = tk.Button(buttonWindow, text="Finish",command=lambda: collectInputs())
+        self.FinishButton.grid(row=len(parameterTypeDict[plotType])+2,column=0)
+        self.FinishButton.config(state=tk.DISABLED)
+        tk.Button(buttonWindow, text="Back",command=lambda: master.switch_frame(SelectSurvivalLevelValuesPage)).grid(row=len(parameterTypeDict[plotType])+2,column=1)
+        tk.Button(buttonWindow, text="Quit",command=lambda: quit()).grid(row=len(parameterTypeDict[plotType])+2,column=2)
 
 class MouseImageSelectionPage(tk.Frame):
     def __init__(self, master):
@@ -288,15 +522,24 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         titleEntry.grid(row=2,column=1,sticky=tk.W)
         titleEntry.insert(tk.END, selectionTitle)
         
-        def collectInputs():
+        def createPlot():
             plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontsize=int(fontSizeEntry.get()),groupRenamingDict=groupRenamingDict)
             tk.messagebox.showinfo(title='Success', message='Plot created!')
+            self.FinishButton.config(state=tk.NORMAL)
+
+        def collectInputs():
             master.switch_frame(PlotExperimentWindow,folderName,switchPage)
+        
+        plotWindow = tk.Frame(self)
+        plotWindow.pack(side=tk.TOP,pady=(10,0))
+        tk.Button(plotWindow, text="Create plot",command=lambda: createPlot()).grid(row=0,column=0)
 
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=tk.TOP,pady=10)
 
-        tk.Button(buttonWindow, text="OK",command=lambda: collectInputs()).grid(row=5,column=0)
+        self.FinishButton = tk.Button(buttonWindow, text="Finish",command=lambda: collectInputs())
+        self.FinishButton.grid(row=5,column=0)
+        self.FinishButton.config(state=tk.DISABLED)
         tk.Button(buttonWindow, text="Back",command=lambda: master.switch_frame(MouseGroupRenamingPage)).grid(row=5,column=1)
         tk.Button(buttonWindow, text="Quit",command=quit).grid(row=5,column=2)
 

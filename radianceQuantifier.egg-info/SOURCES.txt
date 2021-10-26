@@ -15,6 +15,7 @@ radianceQuantifier/dataprocessing/__init__.py
 radianceQuantifier/dataprocessing/inVivoRadianceImagePlotting.py
 radianceQuantifier/dataprocessing/inVivoRadianceProcessing.py
 radianceQuantifier/dataprocessing/miscFunctions.py
+radianceQuantifier/dataprocessing/survivalProcessing.py
 radianceQuantifier/plotting/__init__.py
 radianceQuantifier/plotting/facetPlot1D.py
 radianceQuantifier/plotting/facetPlot2D.py

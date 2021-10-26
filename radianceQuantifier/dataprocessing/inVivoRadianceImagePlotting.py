@@ -378,7 +378,8 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
                     if r == 0:
                         axes[r,c].set_title(trueVals[1],**fontDict)
                     if c == 0:
-                        axes[r,c].text(0,0.5,trueVals[0],verticalalignment='center',horizontalalignment='right',transform=axes[r,c].transAxes,**fontDict)
+                        axes[r,c].text(-0.15,0.5,trueVals[0],verticalalignment='center',horizontalalignment='center',transform=axes[r,c].transAxes,**fontDict)
+                        #axes[r,c].text(0,0.5,trueVals[0],verticalalignment='center',horizontalalignment='right',transform=axes[r,c].transAxes,**fontDict)
     cbar_ax.set_frame_on(True)
     cbar_ax.tick_params(which='both',width=colorbarScale*1.5)
     if fontsize != '':

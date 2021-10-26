@@ -9,20 +9,7 @@ import os,pickle,sys,shutil
 from sklearn.preprocessing import MinMaxScaler
 sns.set_context('talk')
 
-#Image processing packages
-# from matplotlib import image as mplImage
-# import pytesseract
-# from PIL import Image
-# from scipy import ndimage
-# import cv2
-
-# #Clustering
-# import hdbscan
-
 # #Miscellaneous
-# from itertools import tee
-# from tqdm.auto import trange
-# from scipy.signal import argrelmin,find_peaks,savgol_filter
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -226,14 +213,14 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
             minScale = list(minScaleDict.values())[0]
     
     return fullMatrix,[min(minList),max(maxList)]
-        
+
 def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle=''):
 
     fontDict = {}
     for param,paramVal in zip(['fontname','fontsize'],[font,fontsize]):
         if paramVal != '':
             fontDict[param] = paramVal
-    
+
     kwargDict = {'row':row,'col':col,'innerRow':innerRow,'innerCol':innerCol}
     kwargLenDict,kwargValsDict = {},{}
     for kwarg in kwargDict:
@@ -243,12 +230,12 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
             if kwargDict[kwarg] == 'Sample':
                 kwargValsDict[kwarg] = sorted(selectionKeysDf.index.unique(kwargDict[kwarg]).tolist())
             else:
-                kwargValsDict[kwarg] = selectionKeysDf.index.unique(kwargDict[kwarg]).tolist()  
+                kwargValsDict[kwarg] = selectionKeysDf.index.unique(kwargDict[kwarg]).tolist()
         else:
             kwargLenDict[kwarg] = 1
             kwargValsDict[kwarg] = ['']
-            kwargDict[kwarg] = ''    
-    
+            kwargDict[kwarg] = ''
+
     if kwargLenDict['row'] == 1 or kwargLenDict['col'] == 1:
         twoDaxes = False
     else:
@@ -289,14 +276,14 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
                 newKey = newSelectionKeysDf.iloc[rowIndex,0]
                 concatenatedImage,minScale = concatenateImage(pMatrixDict,minScaleDict,keysToCombine,kwargDict,kwargValsDict,unifiedPaddingShape=unifiedPaddingShape)
                 newPmatrixDict[newKey] = concatenatedImage
-            
+
         selectionKeysDf = newSelectionKeysDf.copy()
         pMatrixDict = newPmatrixDict.copy()
         minScaleDict = newMinScaleDict.copy()
     else:
         wspace = None
         hspace=None
-    
+
     plottedParameterIndices = [list(selectionKeysDf.index.names).index(x) for x in selectionKeysDf.index.names if x in [kwargDict['row'],kwargDict['col']]]
     plottedParameterTuples = []
     for indexTuple in selectionKeysDf.values[:,0].tolist():
@@ -304,8 +291,8 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
         indexTupleList = indexTuple.split('-')
         for index in plottedParameterIndices:
             tempList.append(indexTupleList[index])
-        plottedParameterTuples.append(set(tempList))    
-    
+        plottedParameterTuples.append(set(tempList))
+
     fig, axes = plt.subplots(kwargLenDict['row'],kwargLenDict['col'],figsize=(2.5*kwargLenDict['col']*kwargLenDict['innerCol']*0.5,4.55*kwargLenDict['row']*kwargLenDict['innerRow']))
     fig.subplots_adjust(right=0.8)
 
@@ -315,7 +302,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
         fig.subplots_adjust(top=1-0.25/kwargLenDict['row'],wspace=wspace)
     else:
         fig.subplots_adjust(wspace=wspace,hspace=hspace)
-    
+
     fontDict2 = fontDict.copy()
     fontDict2['fontweight'] = 'bold'
     if 'fontsize' in fontDict2:
@@ -346,15 +333,15 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
                 axbox1 = axes[0,int(kwargLenDict['col']/2)].get_position().extents
             else:
                 axbox1 = axes[int(kwargLenDict['col']/2)].get_position().extents
-            middleXPos = 0.5*(axbox1[0] + axbox1[2])   
+            middleXPos = 0.5*(axbox1[0] + axbox1[2])
         bottomYPos = axbox1[3]
         a2 = plt.figtext(middleXPos,bottomYPos,kwargDict['col']+'\n',horizontalalignment='center',verticalalignment='bottom',**fontDict2)
         levelTitles.append(a2)
-        
+
     barWidth = colorbarScale*0.02*(2/len(kwargValsDict['col']))
     barHeight = colorbarScale*0.8*(1/len(kwargValsDict['row']))
-    cbar_ax = fig.add_axes([0.86-0.005*len(kwargValsDict['col']), 0.5-(0.1+barHeight/2)+0.1, barWidth, barHeight])    
-    
+    cbar_ax = fig.add_axes([0.86-0.005*len(kwargValsDict['col']), 0.5-(0.1+barHeight/2)+0.1, barWidth, barHeight])
+
     #cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
     cmap = sns.color_palette(cmap, as_cmap=True)
     for r,rowVal in enumerate(kwargValsDict['row']):
@@ -369,7 +356,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
             else:
                 plottedParameterList = [rowVal,colVal]
                 axes[r,c].axis('off')
-                
+
             if set(plottedParameterList) in plottedParameterTuples:
                 plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
             else:
@@ -395,18 +382,19 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
     cbar_ax.set_frame_on(True)
     cbar_ax.tick_params(which='both',width=colorbarScale*1.5)
     if fontsize != '':
-        cbar_ax.yaxis.label.set_fontsize(fontsize)            
+        cbar_ax.yaxis.label.set_fontsize(fontsize)
         for l in cbar_ax.yaxis.get_ticklabels():
             l.set_fontsize(fontsize)
     if font != '':
-        cbar_ax.yaxis.label.set_family(font)            
+        cbar_ax.yaxis.label.set_family(font)
         for l in cbar_ax.yaxis.get_ticklabels():
             l.set_family(font)
-    if save_image:        
+    if save_image:
         paramTitleList = []
         for param in kwargDict:
             if kwargDict[param] != '':
                 paramTitleList.append('-'.join([param,kwargDict[param]]))
         paramTitle = '_'.join(paramTitleList)
-        imageTitle = '_'.join(['mouseImage',image_dir.split('/')[-2],imageTitle,paramTitle])
-        fig.savefig(image_dir+'processedImages/'+imageTitle+'.png',bbox_extra_artists=(cbar_ax,*levelTitles),bbox_inches='tight')        
+        experimentName = os.getcwd().split('/')[-1]
+        imageTitle = '_'.join(['mouseImage',experimentName,imageTitle,paramTitle])
+        fig.savefig('plots/'+imageTitle+'.png',bbox_extra_artists=(cbar_ax,*levelTitles),bbox_inches='tight')
