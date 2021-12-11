@@ -17,7 +17,6 @@ import radianceQuantifier
 class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
-
         self.title('radianceQuantifier '+version('radianceQuantifier'))
         self._frame = None
         self.homedirectory = '/'.join(os.path.abspath(radianceQuantifier.__file__).split('/')[:-1])
@@ -132,16 +131,22 @@ class ExperimentActionWindow(tk.Frame):
                         templatePathDict = pickle.load(open(master.homedirectory + 'misc/templatePathDict.pkl', 'rb'))
                     else:
                         templatePathDict = {}
+                    #Get raw images
+                    if 'rawImagePathDict.pkl' in os.listdir(master.homedirectory + 'misc'):
+                        rawImagePathDict = pickle.load(open(master.homedirectory + 'misc/rawImagePathDict.pkl', 'rb'))
+                    else:
+                        rawImagePathDict = {}
                     projectName = os.getcwd().split('/')[(-2)]
                     experimentName = os.getcwd().split('/')[(-1)]
                     templatePath = templatePathDict[projectName + '/' + experimentName]
+                    rawImagePath = rawImagePathDict[projectName + '/' + experimentName]
                     if '.csv' in templatePath:
                         sampleNameFile = pd.read_csv(templatePath)
                     else:
                         sampleNameFile = pd.read_excel(templatePath)
 
                     #Radiance df
-                    radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True)
+                    radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=rawImagePath)
                     print(radianceStatisticDf)
                     
                     #Survival df

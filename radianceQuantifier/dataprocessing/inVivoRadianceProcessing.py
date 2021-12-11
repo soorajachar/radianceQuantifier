@@ -24,6 +24,7 @@ from itertools import tee
 from tqdm.auto import trange
 from scipy.signal import argrelmin,find_peaks,savgol_filter
 import warnings
+import subprocess
 
 warnings.filterwarnings("ignore")
 
@@ -769,9 +770,42 @@ def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=T
         brightfield2 = cv2.imread(fileName)        
         groupDf,groupPeaks = processGroupedMouseImage(day+'-'+group,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
         return groupDf,groupPeaks,splitGroupDict
-            
-def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=True,save_pixel_df=False,save_images=False):
+
+def moveRawImages(sampleNameFile,pathToRawImages):
+    fileExtensionDict = {'brightfield':'.TIF','luminescent':'.PNG'}
+    dayRenamingDict = {}
+    for imageType in ['brightfield','luminescent']:
+        if imageType not in os.listdir('inputData'):
+            os.mkdir('inputData/'+imageType)
+        for day in list(pd.unique(sampleNameFile['Day'])):
+            newDay = 'D'+''.join([i for i in day.split() if i.isdigit()])
+            dayRenamingDict[day] = newDay
+            if day in os.listdir(pathToRawImages):
+                if newDay not in os.listdir('inputData/'+imageType):
+                    os.mkdir('inputData/'+imageType+'/'+newDay)
+                for group in list(pd.unique(sampleNameFile['Group'])):
+                    if group in os.listdir(pathToRawImages+'/'+day):
+                        initialPath = pathToRawImages+'/'+day+'/'+group+'/'
+                        if imageType == 'brightfield':
+                            initialName = 'photograph.TIF'
+                        else:
+                            for fileName in os.listdir(pathToRawImages+'/'+day+'/'+group):
+                                if '.png' in fileName or '.PNG' in fileName:
+                                    initialName = fileName
+                                    break
+                        finalPath =  'inputData/'+imageType+'/'+newDay+'/'
+                        finalName = group+fileExtensionDict[imageType]
+                        subprocess.run(['cp',initialPath+initialName,finalPath+finalName])
+    dayIndex = list(sampleNameFile.columns).index('Day')
+    for i in range(sampleNameFile.shape[0]):
+        oldDay = sampleNameFile.iloc[i,dayIndex]
+        sampleNameFile.iloc[i,dayIndex] = dayRenamingDict[oldDay]
+    return sampleNameFile
+
+def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=True,save_pixel_df=False,save_images=False,pathToRawImages=''):
   outputDir = 'outputData/'
+  if pathToRawImages != '':
+      sampleNameFile = moveRawImages(sampleNameFile,pathToRawImages)
   unmatchedGroups = luminescentBrightfieldMatchCheck(sampleNameFile,save_pixel_df=save_pixel_df)
   if len(unmatchedGroups) == 0:
     days = [x for x in pd.unique(sampleNameFile['Day'])]
