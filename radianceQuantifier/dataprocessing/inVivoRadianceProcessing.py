@@ -24,7 +24,7 @@ from itertools import tee
 from tqdm.auto import trange
 from scipy.signal import argrelmin,find_peaks,savgol_filter
 import warnings
-import subprocess
+import shutil
 
 warnings.filterwarnings("ignore")
 
@@ -795,7 +795,8 @@ def moveRawImages(sampleNameFile,pathToRawImages):
                                     break
                         finalPath =  'inputData/'+imageType+'/'+newDay+'/'
                         finalName = group+fileExtensionDict[imageType]
-                        subprocess.run(['cp',initialPath+initialName,finalPath+finalName])
+                        shutil.copyfile(initialPath+initialName,finalPath+finalName)
+    
     dayIndex = list(sampleNameFile.columns).index('Day')
     for i in range(sampleNameFile.shape[0]):
         oldDay = sampleNameFile.iloc[i,dayIndex]

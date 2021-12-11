@@ -979,6 +979,18 @@ class plotElementsGUIPage(tk.Frame):
                 else:
                     plotSpecificDict['scaleToMode'] = False
                 plotSpecificDict['smoothing'] = int(ipe.getSliderValues(smoothingSliderList,['smoothing'])['smoothing'])
+            elif subPlotType == 'line':
+                ciType = ipe.getRadiobuttonValues(ciSelectionRadiobuttonVarsDict)['Error bar']
+                errType = ipe.getRadiobuttonValues(ciStyleSelectionRadiobuttonVarsDict)['Error bar style']
+                if ciType == 'st dev':
+                    plotSpecificDict['ci'] = 'sd'
+                elif ciType == 'conf int':
+                    plotSpecificDict['ci'] = 95
+
+                if errType == 'band' and ciType in ['st dev','conf int']:
+                    plotSpecificDict['err_style'] = 'band'
+                elif errType == 'bar' and ciType in ['st dev','conf int']:
+                    plotSpecificDict['err_style'] = 'bars'
             
             useModifiedDf = False
             sName = titleEntry.get()
@@ -1058,7 +1070,23 @@ class plotElementsGUIPage(tk.Frame):
             smoothnessWindow = tk.Frame(subPlotSpecificWindow)
             smoothnessWindow.grid(row=0,column=1,sticky=tk.N)
             smoothingSliderList = ipe.createParameterAdjustmentSliders(smoothnessWindow,['smoothing'],{'smoothing':[1,99,2,27]})
-        
+        elif subPlotType in ['line']:
+            #Scale to mode button
+            subPlotSpecificWindow = tk.Frame(self)
+            subPlotSpecificWindow.pack(side=tk.TOP,pady=10)
+
+            ciSelectionWindow = tk.Frame(subPlotSpecificWindow)
+            ciSelectionWindow.grid(row=0,column=0,sticky=tk.N)
+            ciSelectionRadiobuttonList,ciSelectionRadiobuttonVarsDict = ipe.createParameterSelectionRadiobuttons(ciSelectionWindow,['Error bar'],{'Error bar':['none','st dev','conf int']})
+            ciSelectionRadiobuttonVarsDict['Error bar'].set('none')
+
+            ciStyleSelectionWindow = tk.Frame(subPlotSpecificWindow)
+            ciStyleSelectionWindow.grid(row=0,column=1,sticky=tk.N)
+            ciStyleSelectionRadiobuttonList,ciStyleSelectionRadiobuttonVarsDict = ipe.createParameterSelectionRadiobuttons(ciStyleSelectionWindow,['Error bar style'],{'Error bar style':['bar','band']})
+            ciStyleSelectionRadiobuttonVarsDict['Error bar style'].set('bar')
+
+
+
         plotButtonWindow = tk.Frame(self)
         plotButtonWindow.pack(side=tk.TOP,pady=10)
         tk.Button(plotButtonWindow, text="Generate First Plot",command=lambda: collectInputs(False)).grid(row=0,column=0)
