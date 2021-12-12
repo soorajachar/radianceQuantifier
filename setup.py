@@ -23,7 +23,7 @@ classifiers = [
     'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
     'Operating System :: Unix',
     'Operating System :: MacOS :: MacOS X',
-    'Operating System :: Windows',
+    'Operating System :: Microsoft :: Windows',
     'Intended Audience :: Science/Research'
 ]
 
