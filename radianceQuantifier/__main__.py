@@ -13,13 +13,18 @@ from radianceQuantifier.setup.experimentSetupGUI import ExperimentSetupStartPage
 from radianceQuantifier.plotting.plottingGUI import PlotExperimentWindow 
 import radianceQuantifier
 
+if os.name == 'nt':
+    dirSep = '\\'
+else:
+    dirSep = '/'
+
 #Root class; handles frame switching in gui
 class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
         self.title('radianceQuantifier '+version('radianceQuantifier'))
         self._frame = None
-        self.homedirectory = '/'.join(os.path.abspath(radianceQuantifier.__file__).split('/')[:-1])
+        self.homedirectory = dirSep.join(os.path.abspath(radianceQuantifier.__file__).split(dirSep)[:-1])
         if self.homedirectory[-1] != '/':
             self.homedirectory+='/'
         print('radianceQuantifier location: '+self.homedirectory)
@@ -136,8 +141,8 @@ class ExperimentActionWindow(tk.Frame):
                         rawImagePathDict = pickle.load(open(master.homedirectory + 'misc/rawImagePathDict.pkl', 'rb'))
                     else:
                         rawImagePathDict = {}
-                    projectName = os.getcwd().split('/')[(-2)]
-                    experimentName = os.getcwd().split('/')[(-1)]
+                    projectName = os.getcwd().split(dirSep)[(-2)]
+                    experimentName = os.getcwd().split(dirSep)[(-1)]
                     templatePath = templatePathDict[projectName + '/' + experimentName]
                     rawImagePath = rawImagePathDict[projectName + '/' + experimentName]
                     if '.csv' in templatePath:

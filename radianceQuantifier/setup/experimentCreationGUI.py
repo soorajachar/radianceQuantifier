@@ -42,7 +42,7 @@ class NewProjectWindow(tk.Frame):
             if rawPathName[-1] != '/':
                 rawPathName+='/'
             if projectName not in os.listdir(rawPathName):
-                subprocess.run(['mkdir',rawPathName+projectName])
+                os.mkdir(rawPathName+projectName)
             if 'pathDict.pkl' in os.listdir(master.homedirectory+'misc'):
                 pathDict = pickle.load(open(master.homedirectory+'misc/pathDict.pkl','rb'))
             else:
@@ -121,10 +121,10 @@ class NewExperimentWindow(tk.Frame):
             experimentName = e1.get()+'-'+amendedExperimentName
             projectName = projectMenu.get()
             pathName = pathDict[projectName]
-            subprocess.run(['mkdir',pathName+projectName+'/'+experimentName])
+            os.mkdir(pathName+projectName+'/'+experimentName)
             subfolders = ['inputData','outputData','plots','misc']
             for subfolder in subfolders:
-                subprocess.run(['mkdir',pathName+projectName+'/'+experimentName+'/'+subfolder])
+                os.mkdir(pathName+projectName+'/'+experimentName+'/'+subfolder)
             
             tk.messagebox.showinfo("Experiment Created", "Experiment\n"+experimentName+"\nin Project \n"+projectName+"\nhas been created.")
 

@@ -9,6 +9,11 @@ import os,pickle,sys,shutil
 from sklearn.preprocessing import MinMaxScaler
 sns.set_context('talk')
 
+if os.name == 'nt':
+    dirSep = '\\'
+else:
+    dirSep = '/'
+
 # #Miscellaneous
 import warnings
 warnings.filterwarnings("ignore")
@@ -396,6 +401,6 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
             if kwargDict[param] != '':
                 paramTitleList.append('-'.join([param,kwargDict[param]]))
         paramTitle = '_'.join(paramTitleList)
-        experimentName = os.getcwd().split('/')[-1]
+        experimentName = os.getcwd().split(dirSep)[-1]
         imageTitle = '_'.join(['mouseImage',experimentName,imageTitle,paramTitle])
         fig.savefig('plots/'+imageTitle+'.png',bbox_extra_artists=(cbar_ax,*levelTitles),bbox_inches='tight')

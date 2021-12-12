@@ -354,7 +354,7 @@ def plotFacetedFigures(folderName,plotType,subPlotType,dataType,subsettedDfList,
         if plotAllVar:
             fullTitleString = createFacetPlotName(folderName,dataType,plotType,subPlotType,legendParameterToLevelNameDict,subsettedDfTitle,levelsPlottedIndividually,useModifiedDf,plotOptions)
             if 'temporaryFirstPlot.png' in os.listdir('plots'):
-                subprocess.run(['rm','plots/temporaryFirstPlot.png'])
+                os.remove('plots/temporaryFirstPlot.png')
         else:
             fullTitleString = 'temporaryFirstPlot'
         if len(subsettedDf.index) > 0:
@@ -513,7 +513,7 @@ def plotSubsettedFigure(subsettedDf,plottingDf,kwargs,facetgridkwargs,plotSpecif
     #Save figure
     if subfolderName != '':
         if subfolderName not in os.listdir(plotFolderName):
-            subprocess.run(['mkdir',plotFolderName+'/'+subfolderName])
+            os.mkdir(plotFolderName+'/'+subfolderName)
         fg.fig.savefig(plotFolderName+'/'+subfolderName+'/'+fullTitleString+'.png',bbox_inches='tight')
     else:
         fg.fig.savefig(plotFolderName+'/'+fullTitleString+'.png',bbox_inches='tight')

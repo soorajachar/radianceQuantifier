@@ -3,6 +3,11 @@ import pickle, os, json, math, subprocess, numpy as np, pandas as pd, tkinter as
 from tkinter import ttk
 from tkinter import filedialog as fd
 
+if os.name == 'nt':
+    dirSep = '\\'
+else:
+    dirSep = '/'
+
 class ExperimentSetupStartPage(tk.Frame):
 
     def __init__(self, master, fName, bPage):
@@ -36,7 +41,7 @@ class ExperimentSetupStartPage(tk.Frame):
                     self.template = pd.read_csv(self.filename)
                 else:
                     self.template = pd.read_excel(self.filename)
-                templateLabel['text'] = self.filename.split('/')[(-1)]
+                templateLabel['text'] = self.filename.split(dirSep)[(-1)]
                 templateLabel['font'] = 'Helvetica 14 bold'
 
         templateFrame = tk.Frame(mainWindow)
@@ -76,8 +81,8 @@ class ExperimentSetupStartPage(tk.Frame):
                     templatePathDict = pickle.load(open(master.homedirectory + 'misc/templatePathDict.pkl', 'rb'))
                 else:
                     templatePathDict = {}
-                projectName = os.getcwd().split('/')[(-2)]
-                experimentName = os.getcwd().split('/')[(-1)]
+                projectName = os.getcwd().split(dirSep)[(-2)]
+                experimentName = os.getcwd().split(dirSep)[(-1)]
                 templatePathDict[projectName + '/' + experimentName] = self.filename
                 with open(master.homedirectory + 'misc/templatePathDict.pkl', 'wb') as (f):
                     pickle.dump(templatePathDict, f)

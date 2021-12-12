@@ -23,6 +23,7 @@ classifiers = [
     'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
     'Operating System :: Unix',
     'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Windows',
     'Intended Audience :: Science/Research'
 ]
 
@@ -34,7 +35,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name="radianceQuantifier",
-    version="0.2.3",
+    version="0.3.0",
     author = "Sooraj Achar",
     author_email = "acharsr@nih.gov",
     description = "Automatically crops mice and quantifies their tumor luminescences from raw IVIS images",

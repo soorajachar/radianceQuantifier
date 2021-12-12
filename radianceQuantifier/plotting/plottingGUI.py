@@ -10,6 +10,10 @@ import radianceQuantifier.dataprocessing.miscFunctions as mf
 import radianceQuantifier.plotting.facetPlotLibrary as fpl 
 import radianceQuantifier.plotting.interactiveGUIElements as ipe
 
+if os.name == 'nt':
+    dirSep = '\\'
+else:
+    dirSep = '/'
 expParamDict = {'radiance':'cell'}
 
 #Get level names and values into an easily accessible dictionary
@@ -386,8 +390,8 @@ class MouseImageSelectionPage(tk.Frame):
             templatePathDict = pickle.load(open(master.homedirectory + 'misc/templatePathDict.pkl', 'rb'))
         else:
             templatePathDict = {}
-        projectName = os.getcwd().split('/')[(-2)]
-        experimentName = os.getcwd().split('/')[(-1)]
+        projectName = os.getcwd().split(dirSep)[(-2)]
+        experimentName = os.getcwd().split(dirSep)[(-1)]
         templatePath = templatePathDict[projectName + '/' + experimentName]
         global sampleNameFile
         if '.csv' in templatePath:

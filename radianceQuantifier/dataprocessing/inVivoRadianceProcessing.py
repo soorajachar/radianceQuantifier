@@ -12,6 +12,11 @@ sns.set_context('talk')
 #Image processing packages
 from matplotlib import image as mplImage
 import pytesseract
+if os.name == 'nt':
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    dirSep = '\\'
+else:
+    dirSep = '/'
 from PIL import Image
 from scipy import ndimage
 import cv2
@@ -697,7 +702,7 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
             minScaleDict[savezKey] = pickle.load(open(base_dir+'imageMatrices/'+oldFileName+'.pkl','rb'))
         
         #Save concatenated files
-        experimentName = os.getcwd().split('/')[-1]
+        experimentName = os.getcwd().split(dirSep)[-1]
         np.savez_compressed(base_dir+experimentName+'-pixel',**savezDict)
         with open(base_dir+experimentName+'-minScale.pkl','wb') as f:
             pickle.dump(minScaleDict,f)
@@ -831,7 +836,7 @@ def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=Tru
         dayDf = pd.concat(groupDfList,keys=groups,names=['Group'])
         dayDfList.append(dayDf)
 
-    experimentName = os.getcwd().split('/')[-1]
+    experimentName = os.getcwd().split(dirSep)[-1]
     outputFileName = 'radianceStatisticPickleFile-'+experimentName
     if 'SampleNames' not in tempDf.columns:
         sampleNamesColumn = []
