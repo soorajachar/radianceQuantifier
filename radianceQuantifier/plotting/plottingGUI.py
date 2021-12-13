@@ -402,7 +402,7 @@ class MouseImageSelectionPage(tk.Frame):
         #Ensure day names are compatible
         dayRenamingDict = {}
         for day in list(pd.unique(sampleNameFile['Day'])):
-            newDay = 'D'+''.join([i for i in day.split() if i.isdigit()])
+            newDay = 'D'+''.join([i for i in day if i.isdigit()])
             dayRenamingDict[day] = newDay
         dayIndex = list(sampleNameFile.columns).index('Day')
         for i in range(sampleNameFile.shape[0]):

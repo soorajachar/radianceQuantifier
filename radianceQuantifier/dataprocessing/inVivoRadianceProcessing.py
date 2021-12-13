@@ -783,7 +783,7 @@ def moveRawImages(sampleNameFile,pathToRawImages):
         if imageType not in os.listdir('inputData'):
             os.mkdir('inputData/'+imageType)
         for day in list(pd.unique(sampleNameFile['Day'])):
-            newDay = 'D'+''.join([i for i in day.split() if i.isdigit()])
+            newDay = 'D'+''.join([i for i in day if i.isdigit()])
             dayRenamingDict[day] = newDay
             if day in os.listdir(pathToRawImages):
                 if newDay not in os.listdir('inputData/'+imageType):
