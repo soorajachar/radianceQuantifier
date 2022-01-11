@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: radianceQuantifier
-Version: 0.3.1
+Version: 0.3.2
 Summary: Automatically crops mice and quantifies their tumor luminescences from raw IVIS images
 Home-page: https://github.com/soorajachar/radianceQuantifier
 Author: Sooraj Achar

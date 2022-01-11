@@ -27,4 +27,5 @@ radianceQuantifier/plotting/plottingGUI.py
 radianceQuantifier/setup/__init__.py
 radianceQuantifier/setup/experimentCreationGUI.py
 radianceQuantifier/setup/experimentSetupGUI.py
+radianceQuantifier/setup/processExperimentGUI.py
 radianceQuantifier/setup/removeExperiment.py

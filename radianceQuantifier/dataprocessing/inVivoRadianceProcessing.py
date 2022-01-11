@@ -849,8 +849,6 @@ def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=Tru
         sampleNamesColumn = sampleNameFile['SampleNames'].tolist()
     
     fullDf = pd.concat(dayDfList,keys=days,names=['Day'])
-    fullDf.to_pickle('/Users/acharsr/Documents/inVivoExperiments/Mehdi/20220110-MB11/misc/temp.pkl')
-    sampleNameFile.to_pickle('/Users/acharsr/Documents/inVivoExperiments/Mehdi/20220110-MB11/misc/temp-sample.pkl')
     fullDf = amendSampleNames(fullDf,dayPeaksList,sampleNameFile,fullSplitGroupDict,save_pixel_df=save_pixel_df)
     radianceStatisticDf = addTrueIndexToDataframe(fullDf,sampleNameFile)
     radianceStatisticDf['Time'] = [int(x[1:]) for x in radianceStatisticDf.index.get_level_values('Day').tolist()]
