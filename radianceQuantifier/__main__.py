@@ -10,6 +10,7 @@ from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalD
 from radianceQuantifier.dataprocessing.miscFunctions import setMaxWidth
 from radianceQuantifier.setup.experimentCreationGUI import NewExperimentWindow,NewProjectWindow,RemoveProjectWindow
 from radianceQuantifier.setup.experimentSetupGUI import ExperimentSetupStartPage
+#from radianceQuantifier.plotting.processExperimentGUI import ProcessExperimentWindow 
 from radianceQuantifier.plotting.plottingGUI import PlotExperimentWindow 
 import radianceQuantifier
 
@@ -149,8 +150,16 @@ class ExperimentActionWindow(tk.Frame):
                         sampleNameFile = pd.read_csv(templatePath)
                     else:
                         sampleNameFile = pd.read_excel(templatePath)
+                    
+                    for i in range(sampleNameFile.shape[0]):
+                        for j in range(sampleNameFile.shape[1]):
+                            if not pd.isna(sampleNameFile.iloc[i,j]):
+                                sampleNameFile.iloc[i,j] = str(sampleNameFile.iloc[i,j])
+                                if sampleNameFile.iloc[i,j].replace(".", "",1).isdigit():
+                                    sampleNameFile.iloc[i,j] = sampleNameFile.iloc[i,j].rstrip("0").rstrip(".")
 
                     #Radiance df
+                    #master.switch_frame(ProcessExperimentWindow,sampleNameFile,pathToRawImages)
                     radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=rawImagePath)
                     print(radianceStatisticDf)
                     

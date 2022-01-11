@@ -605,7 +605,7 @@ def luminescentBrightfieldMatchCheck(sampleNameFile,save_pixel_df=False):
   if save_pixel_df:
     if 'imageMatrices' not in os.listdir(outputDir):
       os.mkdir(outputDir+'imageMatrices')    
-    
+
   for i in range(len(days)):
       day = days[i]
       tempDf = sampleNameFile.query("Day == @day")
@@ -626,12 +626,12 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
 
     clusterer = hdbscan.HDBSCAN(min_cluster_size=int(len(allPeaks)*0.1))
     cluster_labels = clusterer.fit_predict(np.array(allPeaks).reshape(-1,1))
-    cluster_labels = [str(x+1) for x in cluster_labels]  
+    cluster_labels = [str(x+1) for x in cluster_labels]
     tempDf = pd.DataFrame({'Max':allPeaks,'Cluster':cluster_labels})
     sortedClusterList = tempDf.groupby(['Cluster']).mean().sort_values(by='Max').index.get_level_values('Cluster').tolist()
-    
+
     topX = 5
-    topXclusters = tempDf.groupby(['Cluster']).count().sort_values(by=['Max'],ascending=False).index.get_level_values('Cluster').tolist()[:topX]    
+    topXclusters = tempDf.groupby(['Cluster']).count().sort_values(by=['Max'],ascending=False).index.get_level_values('Cluster').tolist()[:topX]
     allClusterMeansDf = tempDf.groupby(['Cluster']).mean()
     clusterMeans = sorted([allClusterMeansDf.loc[x].values[0] for x in topXclusters])
     partitions = [0] + [(clusterMeans[x]+clusterMeans[x+1])/2 for x in range(len(clusterMeans)-1)] + [np.max(tempDf['Max'])]
@@ -642,15 +642,16 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
             if val > partitions[i] and val <= partitions[i+1]:
                 new_cluster_labels.append(str(i+1))
                 break
-    
+
     #new_cluster_labels = [str(sortedClusterList.index(x)+1) for x in cluster_labels]
-    
+
     newFullDf = fullDf.copy()
     newFullDf.index.names = ['Position' if x == 'Sample' else x for x in fullDf.index.names]
     newFullDf = newFullDf.assign(Sample=new_cluster_labels).set_index('Sample', append=True)
-    
+
     fullDfList = []
     splitGroups = [',,'.join(x.split(',,')[:2]) for x in fullSplitGroupDict]
+    splitGroups = [x[:-1] for x in splitGroups]
     matrixRenamingDict = {}
     for currentDay in newFullDf.index.unique('Day'):
         dayDf = newFullDf.query("Day == @currentDay")
@@ -669,13 +670,14 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
                     splitPositionDict[key.split(',,')[2]] = 0
                 for key in keys:
                     splitKey = key.split(',,')
-                    day,group,samples = splitKey[0],splitKey[1],splitKey[2].split(',')
+                    day,originalGroup,samples = splitKey[0],splitKey[1],splitKey[2].split(',')
+                    group = originalGroup[:-1]
                     renamingPositions = fullSplitGroupDict[key]
                     subsetDf = newFullDf.query("Day == @day and Group == @group and Position == @samples").query("Sample == @renamingPositions")
                     for position,renamedPosition in zip(subsetDf.index.unique('Position'),renamingPositions):
                         splitPositionDict[splitKey[2]]+=1
                         trueIndex = newFullDf.query("Day == @day and Group == @group and Position == @samples").index.unique('Sample').tolist().index(renamedPosition)
-                        matrixRenamingDict['-'.join([currentDay,currentGroup,renamedPosition])] = '-'.join([currentDay,currentGroup+','.join(renamingPositions),str(trueIndex+1)])
+                        matrixRenamingDict['-'.join([currentDay,currentGroup,renamedPosition])] = '-'.join([currentDay,originalGroup+'_'+','.join(renamingPositions),str(trueIndex+1)])
                     subsetDfList.append(subsetDf)
                 renamedEntry = pd.concat(subsetDfList).sort_values(by=['Sample'])
             else:
@@ -693,14 +695,14 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
                     renamedEntry = renamedEntry.rename(renamingDict,level='Sample')
             renamedEntry = renamedEntry.sort_values(by=['Sample']).droplevel('Position')
             fullDfList.append(renamedEntry)
-    
+
     if save_pixel_df:
         savezDict,minScaleDict = {},{}
         for savezKey in matrixRenamingDict:
             oldFileName = matrixRenamingDict[savezKey]
-            savezDict[savezKey] = np.load(base_dir+'imageMatrices/'+oldFileName+'.npy')            
+            savezDict[savezKey] = np.load(base_dir+'imageMatrices/'+oldFileName+'.npy')
             minScaleDict[savezKey] = pickle.load(open(base_dir+'imageMatrices/'+oldFileName+'.pkl','rb'))
-        
+
         #Save concatenated files
         experimentName = os.getcwd().split(dirSep)[-1]
         np.savez_compressed(base_dir+experimentName+'-pixel',**savezDict)
@@ -708,14 +710,16 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
             pickle.dump(minScaleDict,f)
         #Delete temporary directory
         shutil.rmtree(base_dir+'imageMatrices/')
-        
-    fullDf = pd.concat(fullDfList)    
+
+    fullDf = pd.concat(fullDfList)
     return fullDf
 
 def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=True,save_pixel_df=False,save_images=False):
     base_dir = 'inputData/'
+    #Check if length of image file name is > 1 (more than just a letter) -> split group
     luminescentImages = sorted([x.split('.')[0] for x in os.listdir(base_dir+'luminescent/'+day+'/') if len(x.split('.')[0]) > 1 and group in x.split('.')[0]])
     brightfieldImages = sorted([x.split('.')[0] for x in os.listdir(base_dir+'brightfield/'+day+'/') if len(x.split('.')[0]) > 1 and group in x.split('.')[0]])
+
     splitGroupDict = {}
     if len(luminescentImages) > 1:
         if set(luminescentImages) == set(brightfieldImages):
@@ -735,8 +739,8 @@ def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=T
                 else:
                   fileName = base_dir+'brightfield/'+day+'/'+splitLuminescentFileName+'.TIF'
                 brightfield = mplImage.imread(fileName)
-                brightfield2 = cv2.imread(fileName)        
-                positionsToKeep = splitLuminescentFileName[1:].split(',')
+                brightfield2 = cv2.imread(fileName)
+                positionsToKeep = splitLuminescentFileName[1:].split('_')[1].split(',')
                 groupDf,groupPeaks = processGroupedMouseImage(day+'-'+splitLuminescentFileName,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
                 if splitIndex != 0:
                     originalSamples = groupDf.index.unique('Sample').tolist()
@@ -745,13 +749,14 @@ def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=T
                     for og,new in zip(originalSamples,newSamples):
                         renamingDict[og] = new
                     groupDf = groupDf.rename(renamingDict,level='Sample')
-                
+
                 splitIndex+=len(groupDf.index.unique('Sample').tolist())
-                splitGroupDict[day+',,'+group+',,'+','.join(groupDf.index.unique('Sample').tolist())] = positionsToKeep
+                splitGroupDict[day+',,'+splitLuminescentFileName.split('_')[0]+',,'+','.join(groupDf.index.unique('Sample').tolist())] = positionsToKeep
+                #splitGroupDict[day+',,'+group+',,'+','.join(groupDf.index.unique('Sample').tolist())] = positionsToKeep
                 groupDfList.append(groupDf)
                 groupPeaksList+=groupPeaks
             groupDf = pd.concat(groupDfList)
-            return groupDf,groupPeaksList,splitGroupDict           
+            return groupDf,groupPeaksList,splitGroupDict
         else:
             print('These images are not shared:\n')
             for missingImage in list(set(luminescentImages) ^ set(brightfieldImages)):
@@ -844,6 +849,8 @@ def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=Tru
         sampleNamesColumn = sampleNameFile['SampleNames'].tolist()
     
     fullDf = pd.concat(dayDfList,keys=days,names=['Day'])
+    fullDf.to_pickle('/Users/acharsr/Documents/inVivoExperiments/Mehdi/20220110-MB11/misc/temp.pkl')
+    sampleNameFile.to_pickle('/Users/acharsr/Documents/inVivoExperiments/Mehdi/20220110-MB11/misc/temp-sample.pkl')
     fullDf = amendSampleNames(fullDf,dayPeaksList,sampleNameFile,fullSplitGroupDict,save_pixel_df=save_pixel_df)
     radianceStatisticDf = addTrueIndexToDataframe(fullDf,sampleNameFile)
     radianceStatisticDf['Time'] = [int(x[1:]) for x in radianceStatisticDf.index.get_level_values('Day').tolist()]

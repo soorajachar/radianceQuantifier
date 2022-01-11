@@ -399,6 +399,13 @@ class MouseImageSelectionPage(tk.Frame):
         else:
             sampleNameFile = pd.read_excel(templatePath)
         
+        for i in range(sampleNameFile.shape[0]):
+            for j in range(sampleNameFile.shape[1]):
+                if not pd.isna(sampleNameFile.iloc[i,j]):
+                    sampleNameFile.iloc[i,j] = str(sampleNameFile.iloc[i,j])
+                    if sampleNameFile.iloc[i,j].replace(".", "",1).isdigit():
+                        sampleNameFile.iloc[i,j] = sampleNameFile.iloc[i,j].rstrip("0").rstrip(".")
+
         #Ensure day names are compatible
         dayRenamingDict = {}
         for day in list(pd.unique(sampleNameFile['Day'])):
@@ -410,7 +417,9 @@ class MouseImageSelectionPage(tk.Frame):
             sampleNameFile.iloc[i,dayIndex] = dayRenamingDict[oldDay]
         
         days = pd.unique(sampleNameFile['Day']).tolist()
+        days = sorted(days, key=lambda x: int(''.join([s for s in x if s.isdigit()])))
         groups = pd.unique(sampleNameFile['Group']).tolist()
+        groups = sorted(groups)
 
         dayWindow = tk.Frame(mainWindow)
         contentWindow = tk.Frame(dayWindow)
