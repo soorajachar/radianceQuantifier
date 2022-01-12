@@ -110,37 +110,51 @@ def returnColorScale(colorBar):
 
     return trueRGBColorScale
 
-def returnColorScaleSpan(legend,colorScale,colorBarScale):
-    croppedLegend = np.multiply(legend[60:105,:75],255)
-    pIm = Image.fromarray(np.uint8(croppedLegend))
-    fullString = pytesseract.image_to_string(pIm)
-    splitStrings = fullString.split('\n')
-    for splitString in splitStrings:
-        if 'Min' in splitString or 'Max' in splitString:
-          #Account for occasinoal pytesseract failures
-          if ' = ' in splitString:
-            splitChar = ' = '
-          else:
-            if ' =' in splitString:
-              splitChar = ' ='
-            elif '= ' in splitString:
-              splitChar = '= '
-            else:
-              if '=' in splitString:
-                splitChar = '='
+def returnColorScaleSpan(legend,colorScale,colorBarScale,cbar_lim=[]):
+    
+    #If using pytesseract to read in colorbar scale limits
+    if len(cbar_lim) == 0:
+        splitChar = True
+        croppedLegend = np.multiply(legend[60:105,:75],255)
+        pIm = Image.fromarray(np.uint8(croppedLegend))
+        fullString = pytesseract.image_to_string(pIm)
+        splitStrings = fullString.split('\n')
+        for splitString in splitStrings:
+            if 'Min' in splitString or 'Max' in splitString:
+              #Account for occasinoal pytesseract failures
+              if ' = ' in splitString:
+                splitChar = ' = '
               else:
-                print('PyTessearct error; equal sign not found. Split string is:'+splitString)
-          if 'Min' in splitString:
-              number = splitString.split(splitChar)[1]
-              minScalingFactor = 10**int(number[-1])
-              scaleStart = float(number[:4])*minScalingFactor
-          elif 'Max' in splitString:
-              number = splitString.split(splitChar)[1]
-              maxScalingFactor = 10**int(number[-1])
-              scaleEnd = float(number[:4])*maxScalingFactor
-            
-    linearScale = np.linspace(scaleStart,scaleEnd,num=len(colorScale))
-    return linearScale,scaleStart
+                if ' =' in splitString:
+                  splitChar = ' ='
+                elif '= ' in splitString:
+                  splitChar = '= '
+                else:
+                  if '=' in splitString:
+                    splitChar = '='
+                  else:
+                    splitChar = False
+              if splitChar:
+                  if 'Min' in splitString:
+                      number = splitString.split(splitChar)[1]
+                      minScalingFactor = 10**int(number[-1])
+                      scaleStart = float(number[:4])*minScalingFactor
+                      hasMin = True
+                  elif 'Max' in splitString:
+                      number = splitString.split(splitChar)[1]
+                      maxScalingFactor = 10**int(number[-1])
+                      scaleEnd = float(number[:4])*maxScalingFactor
+                      hasMax = True
+        if hasMin and hasMax:
+            linearScale = np.linspace(scaleStart,scaleEnd,num=len(colorScale))
+            return linearScale,scaleStart
+        else:
+            raise NameError('pytesseract automatic colorbar reading failed! Try setting a MANUAL axis limit instead')
+    else:
+        scaleStart = cbar_lim[0]
+        scaleEnd = cbar_lim[1]
+        linearScale = np.linspace(scaleStart,scaleEnd,num=len(colorScale))
+        return linearScale,scaleStart
 
 def returnLuminescentImageComponents(luminescent,visualize=False):
     occupancyCutoff = 300
@@ -541,13 +555,13 @@ def returnRadianceMetrics(imageTitle,samples,splitBrightfields,colorScale,linear
     
     return statisticDf
 
-def processGroupedMouseImage(imageTitle,luminescent,brightfield,brightfield2,visualize=False,save_pixel_df=False,sampleNames = [],save_images=False):
+def processGroupedMouseImage(imageTitle,luminescent,brightfield,brightfield2,visualize=False,save_pixel_df=False,sampleNames = [],save_images=False,cbar_lim=[]):
     
     #Preprocess images
     luminescentSamples,colorBar,legend,colorBarScale = returnLuminescentImageComponents(luminescent,visualize=visualize)
     
     colorScale = returnColorScale(colorBar)
-    linearScale,trueMin = returnColorScaleSpan(legend,colorScale,colorBarScale)
+    linearScale,trueMin = returnColorScaleSpan(legend,colorScale,colorBarScale,cbar_lim=cbar_lim)
     brightfieldSamples,originalBrightfieldSamples = rescaleBrightfieldImage(brightfield,brightfield2,luminescentSamples,visualize=visualize)
 
     #Crop images
@@ -714,7 +728,7 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
     fullDf = pd.concat(fullDfList)
     return fullDf
 
-def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=True,save_pixel_df=False,save_images=False):
+def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=True,save_pixel_df=False,save_images=False,cbar_lim=[]):
     base_dir = 'inputData/'
     #Check if length of image file name is > 1 (more than just a letter) -> split group
     luminescentImages = sorted([x.split('.')[0] for x in os.listdir(base_dir+'luminescent/'+day+'/') if len(x.split('.')[0]) > 1 and group in x.split('.')[0]])
@@ -741,7 +755,7 @@ def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=T
                 brightfield = mplImage.imread(fileName)
                 brightfield2 = cv2.imread(fileName)
                 positionsToKeep = splitLuminescentFileName[1:].split('_')[1].split(',')
-                groupDf,groupPeaks = processGroupedMouseImage(day+'-'+splitLuminescentFileName,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
+                groupDf,groupPeaks = processGroupedMouseImage(day+'-'+splitLuminescentFileName,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df,cbar_lim=cbar_lim)
                 if splitIndex != 0:
                     originalSamples = groupDf.index.unique('Sample').tolist()
                     newSamples = [str(int(x)+splitIndex) for x in originalSamples]
@@ -778,7 +792,7 @@ def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=T
           fileName = base_dir+'brightfield/'+day+'/'+group+'.TIF'
         brightfield = mplImage.imread(fileName)
         brightfield2 = cv2.imread(fileName)        
-        groupDf,groupPeaks = processGroupedMouseImage(day+'-'+group,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
+        groupDf,groupPeaks = processGroupedMouseImage(day+'-'+group,luminescent,brightfield,brightfield2,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df,cbar_lim=cbar_lim)
         return groupDf,groupPeaks,splitGroupDict
 
 def moveRawImages(sampleNameFile,pathToRawImages):
@@ -813,7 +827,7 @@ def moveRawImages(sampleNameFile,pathToRawImages):
         sampleNameFile.iloc[i,dayIndex] = dayRenamingDict[oldDay]
     return sampleNameFile
 
-def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=True,save_pixel_df=False,save_images=False,pathToRawImages=''):
+def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=True,save_pixel_df=False,save_images=False,pathToRawImages='',cbar_lim=[]):
   outputDir = 'outputData/'
   if pathToRawImages != '':
       sampleNameFile = moveRawImages(sampleNameFile,pathToRawImages)
@@ -833,7 +847,7 @@ def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=Tru
             group = groups[j]
             sampleNames = []
             
-            groupDf,groupPeaks,splitGroupDict = checkSplitGroups(day,group,dayPeaksList,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df)
+            groupDf,groupPeaks,splitGroupDict = checkSplitGroups(day,group,dayPeaksList,sampleNames=sampleNames,visualize=visualize,save_images=save_images,save_pixel_df=save_pixel_df,cbar_lim=cbar_lim)
             groupDfList.append(groupDf)
             dayPeaksList+=groupPeaks
             fullSplitGroupDict = {**fullSplitGroupDict,**splitGroupDict}

@@ -5,12 +5,10 @@ import tkinter.ttk
 import pandas as pd
 from PIL import Image,ImageTk
 from importlib_metadata import version
-from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline
-from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf
 from radianceQuantifier.dataprocessing.miscFunctions import setMaxWidth
 from radianceQuantifier.setup.experimentCreationGUI import NewExperimentWindow,NewProjectWindow,RemoveProjectWindow
 from radianceQuantifier.setup.experimentSetupGUI import ExperimentSetupStartPage
-#from radianceQuantifier.plotting.processExperimentGUI import ProcessExperimentWindow 
+from radianceQuantifier.setup.processExperimentGUI import ProcessExperimentWindow 
 from radianceQuantifier.plotting.plottingGUI import PlotExperimentWindow 
 import radianceQuantifier
 
@@ -130,7 +128,8 @@ class ExperimentActionWindow(tk.Frame):
             if action == 'se':
                 master.switch_frame(ExperimentSetupStartPage,selectedExperiment,ExperimentActionWindow)
             elif action == 'pd':
-                answer = tkinter.messagebox.askokcancel(title='Confirmation',message='Do you want to process all image data?',icon=tkinter.messagebox.WARNING)
+                #answer = tkinter.messagebox.askokcancel(title='Confirmation',message='Do you want to process all image data?',icon=tkinter.messagebox.WARNING)
+                answer=True
                 if answer:
                     #Get input df
                     if 'templatePathDict.pkl' in os.listdir(master.homedirectory + 'misc'):
@@ -158,20 +157,20 @@ class ExperimentActionWindow(tk.Frame):
                                 if sampleNameFile.iloc[i,j].replace(".", "",1).isdigit():
                                     sampleNameFile.iloc[i,j] = sampleNameFile.iloc[i,j].rstrip("0").rstrip(".")
 
+                    master.switch_frame(ProcessExperimentWindow,ExperimentActionWindow,selectedExperiment,sampleNameFile,rawImagePath)
                     #Radiance df
-                    #master.switch_frame(ProcessExperimentWindow,sampleNameFile,pathToRawImages)
-                    radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=rawImagePath)
-                    print(radianceStatisticDf)
+                    #radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=rawImagePath)
+                    #print(radianceStatisticDf)
                     
                     #Survival df
                     #Legacy formatting
-                    subsetDf = radianceStatisticDf.copy()
-                    subsetDf = subsetDf.droplevel('Time')
-                    subsetDf.index.names = [x if x != 'Day' else 'Time' for x in subsetDf.index.names]
+                    #subsetDf = radianceStatisticDf.copy()
+                    #subsetDf = subsetDf.droplevel('Time')
+                    #subsetDf.index.names = [x if x != 'Day' else 'Time' for x in subsetDf.index.names]
                     #Create ungrouped survival dataframe
-                    survivalDf = createSurvivalDf(subsetDf,[],selectedExperiment,saveDf=True)
+                    #survivalDf = createSurvivalDf(subsetDf,[],selectedExperiment,saveDf=True)
                     
-                    tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
+                    #tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
             elif action == 'plt':
                 master.switch_frame(PlotExperimentWindow,selectedExperiment,ExperimentActionWindow)
 
