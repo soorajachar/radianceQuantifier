@@ -535,10 +535,10 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         cmapEntry.grid(row=0,column=1,sticky=tk.W)
         cmapEntry.set(defaultCmaps[0])
 
-        tk.Label(mainWindow,text='Font size:').grid(row=1,column=0,sticky=tk.W)
-        fontSizeEntry = tk.Entry(mainWindow)
-        fontSizeEntry.grid(row=1,column=1,sticky=tk.W)
-        fontSizeEntry.insert(tk.END, '42')
+        tk.Label(mainWindow,text='Font Scale:').grid(row=1,column=0,sticky=tk.W)
+        fontScaleEntry = tk.Entry(mainWindow)
+        fontScaleEntry.grid(row=1,column=1,sticky=tk.W)
+        fontScaleEntry.insert(tk.END, '1')
         
         tk.Label(mainWindow,text='Plot Title:').grid(row=2,column=0,sticky=tk.W)
         titleEntry = tk.Entry(mainWindow)
@@ -546,7 +546,8 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         titleEntry.insert(tk.END, selectionTitle)
         
         def createPlot():
-            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontsize=int(fontSizeEntry.get()),groupRenamingDict=groupRenamingDict)
+            maxTextLength = len(max(list(groupRenamingDict.values()),key=len))
+            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
             tk.messagebox.showinfo(title='Success', message='Plot created!')
             self.FinishButton.config(state=tk.NORMAL)
 

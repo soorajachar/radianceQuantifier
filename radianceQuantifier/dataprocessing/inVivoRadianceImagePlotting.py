@@ -219,7 +219,7 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
     
     return fullMatrix,[min(minList),max(maxList)]
 
-def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle=''):
+def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
 
     fontDict = {}
     for param,paramVal in zip(['fontname','fontsize'],[font,fontsize]):
@@ -288,7 +288,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
     else:
         wspace = None
         hspace=None
-
+     
     plottedParameterIndices = [list(selectionKeysDf.index.names).index(x) for x in selectionKeysDf.index.names if x in [kwargDict['row'],kwargDict['col']]]
     plottedParameterTuples = []
     for indexTuple in selectionKeysDf.values[:,0].tolist():
@@ -300,6 +300,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
 
     fig, axes = plt.subplots(kwargLenDict['row'],kwargLenDict['col'],figsize=(2.5*kwargLenDict['col']*kwargLenDict['innerCol']*0.5,4.55*kwargLenDict['row']*kwargLenDict['innerRow']))
     fig.subplots_adjust(right=0.8)
+    r = fig.canvas.get_renderer()
 
     if not marginTitles:
         titleList = [x for x in [kwargDict['row'],kwargDict['col']] if x != '']
@@ -307,6 +308,14 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
         fig.subplots_adjust(top=1-0.25/kwargLenDict['row'],wspace=wspace)
     else:
         fig.subplots_adjust(wspace=wspace,hspace=hspace)
+                            
+    #Fitted hyperbolic saddle that describes relationship between font size, text length, and text width in pixels
+    widthBounds = 0.9
+    bbox = axes[0,0].get_window_extent(renderer=r)
+    axWidth, axHeight = bbox.width, bbox.height
+    textWidth = widthBounds*axWidth
+    textSize = (textWidth-0.025496721637466635)/(maxTextLength*0.8620902)
+    fontDict['fontsize'] = int(textSize*fontScale)
 
     fontDict2 = fontDict.copy()
     fontDict2['fontweight'] = 'bold'
@@ -346,7 +355,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
     barWidth = colorbarScale*0.02*(2/len(kwargValsDict['col']))
     barHeight = colorbarScale*0.8*(1/len(kwargValsDict['row']))
     cbar_ax = fig.add_axes([0.86-0.005*len(kwargValsDict['col']), 0.5-(0.1+barHeight/2)+0.1, barWidth, barHeight])
-
+    
     #cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
     cmap = sns.color_palette(cmap, as_cmap=True)
     for r,rowVal in enumerate(kwargValsDict['row']):
