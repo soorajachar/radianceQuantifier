@@ -349,6 +349,8 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
             keptIntervals.append(interval)
 
     peaks,finalKeptIntervals = [],[]
+    
+    scaledInvervalValues = MinMaxScaler().fit_transform
     secondaryCutoff = 0.1
     for interval in keptIntervals:
         startpoint = interval[0]
@@ -370,6 +372,10 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
                 break
         finalKeptIntervals.append([leftEndpoint,rightEndpoint])
     
+    #Scale peaks by image width to keep peaks tightly clustered between images
+    minPlot = min(verticalMouseSeparationDf.index.get_level_values('Column').tolist())
+    maxPlot = max(verticalMouseSeparationDf.index.get_level_values('Column').tolist())
+    peaks = [(x-minPlot)/(maxPlot-minPlot) for x in peaks]
     if visualize:
         verticalMouseSeparationDf.loc[:,:] = data.reshape(-1,1)
         g = sns.relplot(data=verticalMouseSeparationDf,x='Column',y='Count',kind='line')
@@ -642,11 +648,11 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
     cluster_labels = clusterer.fit_predict(np.array(allPeaks).reshape(-1,1))
     cluster_labels = [str(x+1) for x in cluster_labels]
     tempDf = pd.DataFrame({'Max':allPeaks,'Cluster':cluster_labels})
-    sortedClusterList = tempDf.groupby(['Cluster']).mean().sort_values(by='Max').index.get_level_values('Cluster').tolist()
+    sortedClusterList = tempDf.groupby(['Cluster']).median().sort_values(by='Max').index.get_level_values('Cluster').tolist()
 
     topX = 5
     topXclusters = tempDf.groupby(['Cluster']).count().sort_values(by=['Max'],ascending=False).index.get_level_values('Cluster').tolist()[:topX]
-    allClusterMeansDf = tempDf.groupby(['Cluster']).mean()
+    allClusterMeansDf = tempDf.groupby(['Cluster']).median()
     clusterMeans = sorted([allClusterMeansDf.loc[x].values[0] for x in topXclusters])
     partitions = [0] + [(clusterMeans[x]+clusterMeans[x+1])/2 for x in range(len(clusterMeans)-1)] + [np.max(tempDf['Max'])]
     new_cluster_labels = []
@@ -657,11 +663,30 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
                 new_cluster_labels.append(str(i+1))
                 break
 
+    tempDf['Cluster'] = new_cluster_labels
     #new_cluster_labels = [str(sortedClusterList.index(x)+1) for x in cluster_labels]
 
     newFullDf = fullDf.copy()
     newFullDf.index.names = ['Position' if x == 'Sample' else x for x in fullDf.index.names]
     newFullDf = newFullDf.assign(Sample=new_cluster_labels).set_index('Sample', append=True)
+    #newFullDf['Max'] = tempDf['Max']
+
+    #Make sure each 5 mouse group has 5 unique samples. If not, order by maxPeak
+    indexingDf = newFullDf.droplevel('Sample')
+    indexingDf = indexingDf.query("Position == '1'").droplevel('Position')
+    subsetDfList = []
+    allSplitGroupCombos = [[x.split(',,')[0],x.split(',,')[1][0]] for x in list(fullSplitGroupDict.keys())]
+    for row in range(indexingDf.shape[0]):
+        name = indexingDf.iloc[row,:].name
+        subsetDf = newFullDf.xs(name,level=tuple(indexingDf.index.names),drop_level=False).reset_index()
+        #Not a split group
+        if name[0:2] not in allSplitGroupCombos:
+            if subsetDf.shape[0] == 5 and len(list(pd.unique(subsetDf['Sample']))) != 5:
+                subsetDf['Sample'] = subsetDf['Position']
+        subsetDf = subsetDf.set_index(newFullDf.index.names)
+        subsetDfList.append(subsetDf)
+    #Combine sorted 5-mouse dfs (and others)
+    newFullDf = pd.concat(subsetDfList)
 
     fullDfList = []
     splitGroups = [',,'.join(x.split(',,')[:2]) for x in fullSplitGroupDict]
