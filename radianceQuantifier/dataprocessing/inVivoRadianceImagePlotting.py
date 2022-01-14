@@ -425,7 +425,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,tailCrop=False,row=
                 if set(plottedParameterList) in plottedParameterTuples:
                     tailCropIndex = returnTailCropIndex(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
                     tailCropIndices.append(tailCropIndex)
-        minTailCrop = min(tailCropIndices)
+        minTailCrop = max(245,min(tailCropIndices))
     else:
         minTailCrop = -1
         
