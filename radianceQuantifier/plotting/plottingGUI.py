@@ -545,9 +545,14 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         titleEntry.grid(row=2,column=1,sticky=tk.W)
         titleEntry.insert(tk.END, selectionTitle)
         
+        tailCropVar = tk.BooleanVar()
+        tailCropCB = tk.Checkbutton(mainWindow,text='Crop tail',variable=tailCropVar)
+        tailCropCB.select()
+        tailCropCB.grid(row=3,column=0,columnspan=2)
+        
         def createPlot():
             maxTextLength = len(max(list(groupRenamingDict.values()),key=len))
-            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
+            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
             tk.messagebox.showinfo(title='Success', message='Plot created!')
             self.FinishButton.config(state=tk.NORMAL)
 

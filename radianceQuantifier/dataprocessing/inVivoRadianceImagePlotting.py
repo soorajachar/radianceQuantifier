@@ -77,7 +77,7 @@ def adaptMatricesForPlotting(radianceMatrix,brightfieldMatrix,trueMin):
     
     return plottingMatrix
 
-def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,row,col,r,c,rowVal,colVal,twoDaxes=True,groupRenamingDict={},marginTitles=True,numericDays=False,fontDict={}):
+def returnTailCropIndex(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,row,col,r,c,rowVal,colVal,twoDaxes=True,groupRenamingDict={},marginTitles=True,numericDays=False,fontDict={}):
     trueVals,trueLevels,trueAxisIndices = [],[],[]
     for val,level,index in zip([rowVal,colVal],[row,col],[r,c]):
         if val != '':
@@ -100,6 +100,50 @@ def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKey
     trueMax = minScaleDict[sampleKey][1]
     
     radianceMatrix,brightfieldMatrix,b = sampleMatrix[:,:,0],sampleMatrix[:,:,1],sampleMatrix[:,:,2]
+    plottingDf = pd.DataFrame(brightfieldMatrix)
+    plottingDf.index.name = 'Row'
+    plottingDf.columns.name = 'Column'
+    #plottingDf.loc[:,:] = MinMaxScaler().fit_transform(plottingDf.values)
+    columnBrightfield = plottingDf.sum(axis=1).to_frame('Value')
+    maxIndex = np.argmax(columnBrightfield)
+    maxVal = np.max(columnBrightfield).values[0]
+    limit = 0.1*maxVal
+    for i in range(maxIndex,columnBrightfield.shape[0]):
+        if columnBrightfield.iloc[i,0] < limit:
+            tailCropIndex = i
+            break
+#     g = sns.relplot(data=plottingDf.sum(axis=1).to_frame('Value'),x='Row',y="Value",kind='line')
+#     g.axes.flat[0].axvline(color='k',linestyle='--',x=tailCropIndex)
+#     g.axes.flat[0].axhline(color='r',linestyle='--',y=limit)
+    return tailCropIndex
+
+def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,row,col,r,c,rowVal,colVal,tailCrop=-1,twoDaxes=True,groupRenamingDict={},marginTitles=True,numericDays=False,fontDict={}):
+    trueVals,trueLevels,trueAxisIndices = [],[],[]
+    for val,level,index in zip([rowVal,colVal],[row,col],[r,c]):
+        if val != '':
+            trueVals.append(val)
+            trueLevels.append(level)
+            trueAxisIndices.append(index)
+    sampleKey = selectionKeysDf.xs(trueVals,level=trueLevels,drop_level=False).values[0,0]
+    
+    if len(groupRenamingDict) != 0:
+        for i,level in enumerate(trueLevels):
+            if level == 'Group' and trueVals[i] in groupRenamingDict.keys():
+                trueVals[i] = groupRenamingDict[trueVals[i]]
+    if numericDays:
+        for i,level in enumerate(trueLevels):
+            if level == 'Day':
+                trueVals[i] = trueVals[i][1:]
+    
+    sampleMatrix = pMatrixDict[sampleKey]
+    trueMin = minScaleDict[sampleKey][0]
+    trueMax = minScaleDict[sampleKey][1]
+    
+    radianceMatrix,brightfieldMatrix,b = sampleMatrix[:,:,0],sampleMatrix[:,:,1],sampleMatrix[:,:,2]
+    plottingDf = pd.DataFrame(brightfieldMatrix)
+    if tailCrop != -1:
+        radianceMatrix = radianceMatrix[:tailCrop,:]
+        brightfieldMatrix = brightfieldMatrix[:tailCrop,:]
     plottingMatrix = adaptMatricesForPlotting(radianceMatrix,brightfieldMatrix,trueMin)
     sampleDf = pd.DataFrame(plottingMatrix)
     sampleDf.iloc[-1,-1] = trueMax
@@ -219,7 +263,7 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
     
     return fullMatrix,[min(minList),max(maxList)]
 
-def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
+def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,tailCrop=False,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
 
     fontDict = {}
     for param,paramVal in zip(['fontname','fontsize'],[font,fontsize]):
@@ -297,8 +341,13 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
         for index in plottedParameterIndices:
             tempList.append(indexTupleList[index])
         plottedParameterTuples.append(set(tempList))
-
-    fig, axes = plt.subplots(kwargLenDict['row'],kwargLenDict['col'],figsize=(2.5*kwargLenDict['col']*kwargLenDict['innerCol']*0.5,4.55*kwargLenDict['row']*kwargLenDict['innerRow']))
+    
+    if tailCrop:
+        tailCropScalingFactor = 0.6
+    else:
+        tailCropScalingFactor = 1
+    
+    fig, axes = plt.subplots(kwargLenDict['row'],kwargLenDict['col'],figsize=(2.5*kwargLenDict['col']*kwargLenDict['innerCol']*0.5,tailCropScalingFactor*4.55*kwargLenDict['row']*kwargLenDict['innerRow']))
     fig.subplots_adjust(right=0.8)
     r = fig.canvas.get_renderer()
 
@@ -353,11 +402,33 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
         levelTitles.append(a2)
 
     barWidth = colorbarScale*0.02*(2/len(kwargValsDict['col']))
-    barHeight = colorbarScale*0.8*(1/len(kwargValsDict['row']))
+    barHeight = (1/tailCropScalingFactor)*colorbarScale*0.8*(1/len(kwargValsDict['row']))
     cbar_ax = fig.add_axes([0.86-0.005*len(kwargValsDict['col']), 0.5-(0.1+barHeight/2)+0.1, barWidth, barHeight])
     
     #cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7])
     cmap = sns.color_palette(cmap, as_cmap=True)
+    #Grab tailcropping indices
+    if tailCrop:
+        tailCropIndices = []
+        for r,rowVal in enumerate(kwargValsDict['row']):
+            for c,colVal in enumerate(kwargValsDict['col']):
+                if not twoDaxes:
+                    if kwargLenDict['row'] == 1:
+                        plottedParameterList = [colVal]
+                        axes[c].axis('off')
+                    else:
+                        plottedParameterList = [rowVal]
+                        axes[r].axis('off')
+                else:
+                    plottedParameterList = [rowVal,colVal]
+                    axes[r,c].axis('off')
+                if set(plottedParameterList) in plottedParameterTuples:
+                    tailCropIndex = returnTailCropIndex(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
+                    tailCropIndices.append(tailCropIndex)
+        minTailCrop = min(tailCropIndices)
+    else:
+        minTailCrop = -1
+        
     for r,rowVal in enumerate(kwargValsDict['row']):
         for c,colVal in enumerate(kwargValsDict['col']):
             if not twoDaxes:
@@ -372,7 +443,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,row='',col='',inner
                 axes[r,c].axis('off')
 
             if set(plottedParameterList) in plottedParameterTuples:
-                plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
+                plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,tailCrop=minTailCrop,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
             else:
                 if marginTitles:
                     trueVals,trueLevels,trueAxisIndices = [],[],[]
