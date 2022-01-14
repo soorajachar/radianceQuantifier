@@ -253,6 +253,22 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
                     sampleKey = selectionKeysDf.xs([selectionKeysDf.index.unique(kwargDict['innerCol']).tolist()[tempIndex]],level=[kwargDict['innerCol']],drop_level=False).values[0,0]
                     tempMatrix,trueMin,trueMax = pMatrixDict[sampleKey],minScaleDict[sampleKey][0],minScaleDict[sampleKey][1]
                     sampleMatrix = np.dstack([np.ones(tempMatrix.shape[:2])*-1,np.zeros(tempMatrix.shape[:2]),np.ones(tempMatrix.shape[:2])*np.min(tempMatrix[:,:,2])])
+                plottingDf = pd.DataFrame(pMatrixDict[sampleKey][:,:,1])
+                plottingDf.index.name = 'Row'
+                plottingDf.columns.name = 'Column'
+                columnBrightfield = plottingDf.sum(axis=0).to_frame('Value')
+                boundary = 110
+                if plottingDf.shape[1] > boundary:
+                    leftMax = np.max(columnBrightfield.iloc[:boundary].values)#.values[0]
+                    leftMaxInd = np.argmax(columnBrightfield.iloc[:boundary].values)
+                    rightMax = np.max(columnBrightfield.iloc[boundary:].values)#.values[0]
+                    rightMaxInd = boundary+np.argmax(columnBrightfield.iloc[boundary:].values)
+                    if rightMax >= 0.5*leftMax:
+                        trueBoundary = leftMaxInd+np.argmin(columnBrightfield.iloc[leftMaxInd:rightMaxInd].values)
+                        sampleMatrix = sampleMatrix[:,:trueBoundary,:]
+#                         g = sns.relplot(data=columnBrightfield,x='Column',y="Value",kind='line')
+#                         g.axes.flat[0].set_title(sampleKey)
+#                         g.axes.flat[0].axvline(color='k',linestyle='--',x=trueBoundary)
                 matrixList.append(sampleMatrix) 
                 minList.append(trueMin)
                 maxList.append(trueMax)                
@@ -428,7 +444,9 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,tailCrop=False,row=
         minTailCrop = max(245,min(tailCropIndices))
     else:
         minTailCrop = -1
-        
+    
+    if 'col' in list(kwargValsDict.keys()) and len(col_order) != 0:
+        kwargValsDict['col'] = col_order 
     for r,rowVal in enumerate(kwargValsDict['row']):
         for c,colVal in enumerate(kwargValsDict['col']):
             if not twoDaxes:
