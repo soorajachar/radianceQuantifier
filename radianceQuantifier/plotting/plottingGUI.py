@@ -9,6 +9,7 @@ from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalD
 import radianceQuantifier.dataprocessing.miscFunctions as mf
 import radianceQuantifier.plotting.facetPlotLibrary as fpl 
 import radianceQuantifier.plotting.interactiveGUIElements as ipe
+import matplotlib.colors as mcolors
 
 if os.name == 'nt':
     dirSep = '\\'
@@ -495,20 +496,31 @@ class MouseGroupRenamingPage(tk.Frame):
         mainWindow.pack(side=tk.TOP,padx=10,pady=(10,0))
         
         groupRenameEntryList = []
+        groupRecoloringEntryList = []
+        defaultColorDict = mcolors.CSS4_COLORS 
         columnsToKeep = [i for i,x in enumerate(list(sampleNameFile.columns)) if x not in ['Group','Day','SampleNames']]
+        #tk.Label(mainWindow,text='Old').grid(row=0,column=0,sticky=tk.W)
+        tk.Label(mainWindow,text='New group name').grid(row=0,column=1,sticky=tk.W)
+        tk.Label(mainWindow,text='Text color').grid(row=0,column=2,sticky=tk.W)
         for i,selectedGroup in enumerate(selectedGroups):
-            tk.Label(mainWindow,text=selectedGroup+' -> ').grid(row=i,column=0,sticky=tk.W)
+            tk.Label(mainWindow,text=selectedGroup+' -> ').grid(row=i+1,column=0,sticky=tk.W)
             e = tk.Entry(mainWindow)
-            e.grid(row=i,column=1,sticky=tk.W)
+            e.grid(row=i+1,column=1,sticky=tk.W)
             indexList = sampleNameFile.query("Group == @selectedGroup").iloc[0,:].values.tolist()
             indexList = [x for i,x in enumerate(indexList) if i in columnsToKeep]
             defaultValue = ', '.join(indexList)
             e.insert(tk.END, defaultValue)
             groupRenameEntryList.append(e)
-        
+            textColorEntry = tkinter.ttk.Combobox(mainWindow,values=list(defaultColorDict.keys()))
+            textColorEntry.grid(row=i+1,column=2,sticky=tk.W)
+            textColorEntry.set('black')
+            groupRecoloringEntryList.append(textColorEntry)
+
         def collectInputs():
             global groupRenamingDict
+            global groupRecoloringDict
             groupRenamingDict = {selectedGroups[i]:x.get() for i,x in enumerate(groupRenameEntryList) if x.get() != ''}
+            groupRecoloringDict = {selectedGroups[i]:x.get() for i,x in enumerate(groupRecoloringEntryList) if x.get() != ''}
             master.switch_frame(MouseImagePlottingOptionsPage)
         
         buttonWindow = tk.Frame(self)
@@ -557,7 +569,7 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         
         def createPlot():
             maxTextLength = len(max(list(groupRenamingDict.values()),key=len))
-            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
+            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,groupRecoloringDict=groupRecoloringDict,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
             tk.messagebox.showinfo(title='Success', message='Plot created!')
             self.FinishButton.config(state=tk.NORMAL)
 

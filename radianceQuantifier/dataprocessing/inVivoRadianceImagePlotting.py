@@ -117,7 +117,7 @@ def returnTailCropIndex(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeys
 #     g.axes.flat[0].axhline(color='r',linestyle='--',y=limit)
     return tailCropIndex
 
-def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,row,col,r,c,rowVal,colVal,tailCrop=-1,twoDaxes=True,groupRenamingDict={},marginTitles=True,numericDays=False,fontDict={}):
+def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,row,col,r,c,rowVal,colVal,groupRecoloringDict={},tailCrop=-1,twoDaxes=True,groupRenamingDict={},marginTitles=True,numericDays=False,fontDict={}):
     trueVals,trueLevels,trueAxisIndices = [],[],[]
     for val,level,index in zip([rowVal,colVal],[row,col],[r,c]):
         if val != '':
@@ -153,7 +153,7 @@ def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKey
             axes[r,c].set_title('-'.join(trueVals),**fontDict)
         else:
             if r == 0:
-                axes[r,c].set_title(trueVals[1],**fontDict)
+                axes[r,c].set_title(trueVals[1],{**fontDict,**{'color':groupRecoloringDict[colVal]}})
             if c == 0:
                 axes[r,c].text(-0.15,0.5,trueVals[0],verticalalignment='center',horizontalalignment='center',transform=axes[r,c].transAxes,**fontDict)
         axes[r,c].imshow(b,zorder=0, cmap='gray')
@@ -279,7 +279,7 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
     
     return fullMatrix,[min(minList),max(maxList)]
 
-def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,tailCrop=False,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
+def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,groupRecoloringDict={},tailCrop=False,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
 
     fontDict = {}
     for param,paramVal in zip(['fontname','fontsize'],[font,fontsize]):
@@ -461,7 +461,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,tailCrop=False,row=
                 axes[r,c].axis('off')
 
             if set(plottedParameterList) in plottedParameterTuples:
-                plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,tailCrop=minTailCrop,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
+                plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeysDf,kwargDict['row'],kwargDict['col'],r,c,rowVal,colVal,groupRecoloringDict=groupRecoloringDict,tailCrop=minTailCrop,twoDaxes=twoDaxes,groupRenamingDict=groupRenamingDict,marginTitles=marginTitles,numericDays=numericDays,fontDict=fontDict)
             else:
                 if marginTitles:
                     trueVals,trueLevels,trueAxisIndices = [],[],[]
