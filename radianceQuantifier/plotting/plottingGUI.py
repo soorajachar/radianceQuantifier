@@ -498,7 +498,9 @@ class MouseGroupRenamingPage(tk.Frame):
         groupRenameEntryList = []
         groupRecoloringEntryList = []
         defaultColorDict = mcolors.CSS4_COLORS 
+        global indexNames
         columnsToKeep = [i for i,x in enumerate(list(sampleNameFile.columns)) if x not in ['Group','Day','SampleNames']]
+        indexNames = [x for i,x in enumerate(list(sampleNameFile.columns)) if x not in ['Group','Day','SampleNames']]
         #tk.Label(mainWindow,text='Old').grid(row=0,column=0,sticky=tk.W)
         tk.Label(mainWindow,text='New group name').grid(row=0,column=1,sticky=tk.W)
         tk.Label(mainWindow,text='Text color').grid(row=0,column=2,sticky=tk.W)
@@ -557,19 +559,29 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         titleEntry.grid(row=2,column=1,sticky=tk.W)
         titleEntry.insert(tk.END, selectionTitle)
         
-        tk.Label(mainWindow,text='Group Order:').grid(row=3,column=0,sticky=tk.W)
+        tk.Label(mainWindow,text='Column Title:').grid(row=3,column=0,sticky=tk.W)
+        columnTitleEntry = tk.Entry(mainWindow)
+        columnTitleEntry.grid(row=3,column=1,sticky=tk.W)
+        columnTitleEntry.insert(tk.END, ', '.join(indexNames))
+        
+        tk.Label(mainWindow,text='Row Title:').grid(row=4,column=0,sticky=tk.W)
+        rowTitleEntry = tk.Entry(mainWindow)
+        rowTitleEntry.grid(row=4,column=1,sticky=tk.W)
+        rowTitleEntry.insert(tk.END, 'Day')
+        
+        tk.Label(mainWindow,text='Group Order:').grid(row=5,column=0,sticky=tk.W)
         groupOrderEntry = tk.Entry(mainWindow)
-        groupOrderEntry.grid(row=3,column=1,sticky=tk.W)
+        groupOrderEntry.grid(row=5,column=1,sticky=tk.W)
         groupOrderEntry.insert(tk.END, ','.join(list(groupRenamingDict.keys())))
         
         tailCropVar = tk.BooleanVar()
         tailCropCB = tk.Checkbutton(mainWindow,text='Crop tail',variable=tailCropVar)
         tailCropCB.select()
-        tailCropCB.grid(row=4,column=0,columnspan=2,pady=5)
+        tailCropCB.grid(row=6,column=0,columnspan=2,pady=5)
         
         def createPlot():
             maxTextLength = len(max(list(groupRenamingDict.values()),key=len))
-            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,groupRecoloringDict=groupRecoloringDict,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
+            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,titleRenamingDict={'row':rowTitleEntry.get(),'col':columnTitleEntry.get()},groupRecoloringDict=groupRecoloringDict,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
             tk.messagebox.showinfo(title='Success', message='Plot created!')
             self.FinishButton.config(state=tk.NORMAL)
 

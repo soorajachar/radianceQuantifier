@@ -279,7 +279,7 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
     
     return fullMatrix,[min(minList),max(maxList)]
 
-def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,groupRecoloringDict={},tailCrop=False,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
+def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={'row':'Day','col':'Group'},groupRecoloringDict={},tailCrop=False,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
 
     fontDict = {}
     for param,paramVal in zip(['fontname','fontsize'],[font,fontsize]):
@@ -395,7 +395,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,groupRecoloringDict
         else:
             axbox1 = axes[0].get_position().extents
         rightXPos = axbox1[0]
-        a1 = plt.figtext(rightXPos,0.5,kwargDict['row']+'\n\n', rotation = 90,horizontalalignment='right',verticalalignment='center',**fontDict2)
+        a1 = plt.figtext(rightXPos,0.5,titleRenamingDict['row']+'\n\n', rotation = 90,horizontalalignment='right',verticalalignment='center',**fontDict2)
         levelTitles.append(a1)
         #fig.suptitle(kwargDict['row']+'\n',x=rightXPos,y=0.5, rotation = 90,horizontalalignment='right',verticalalignment='center',**fontDict2)
     if kwargDict['col'] != '':
@@ -414,7 +414,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,groupRecoloringDict
                 axbox1 = axes[int(kwargLenDict['col']/2)].get_position().extents
             middleXPos = 0.5*(axbox1[0] + axbox1[2])
         bottomYPos = axbox1[3]
-        a2 = plt.figtext(middleXPos,bottomYPos,kwargDict['col']+'\n',horizontalalignment='center',verticalalignment='bottom',**fontDict2)
+        a2 = plt.figtext(middleXPos,bottomYPos,titleRenamingDict['col']+'\n',horizontalalignment='center',verticalalignment='bottom',**fontDict2)
         levelTitles.append(a2)
 
     barWidth = colorbarScale*0.02*(2/len(kwargValsDict['col']))
