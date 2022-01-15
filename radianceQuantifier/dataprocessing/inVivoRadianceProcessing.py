@@ -33,6 +33,8 @@ import shutil
 
 warnings.filterwarnings("ignore")
 
+referencePercentiles = [155,191,213,229,240,249,256,261,266,270,273,277,280,283,286,288,292,295,297,299,303,305,307,310,312,314,316,318,321,323,325,327,329,331,333,335,337,340,342,344,346,349,351,354,356,359,362,365,368,371,375,379,383,387,392,398,404,410,418,426,437,450,466,487,511,538,570,609,656,715,793,893,1012,1162,1351,1571,1789,1996,2190,2366,2526,2686,2850,3015,3172,3325,3461,3585,3706,3818,3922,4019,4112,4201,4289,4379,4475,4576,4690,4844,5713]
+
 def ranges(nums):
     nums = sorted(set(nums))
     gaps = [[s, e] for s, e in zip(nums, nums[1:]) if s+1 < e]
@@ -220,12 +222,45 @@ def returnLuminescentImageComponents(luminescent,visualize=False):
     
     return miceSamples,colorBar,legend,colorBarScale
 
+def ecdf(xdata):
+    xdataecdf = np.sort(xdata)
+    ydataecdf = np.arange(1, len(xdata) + 1) / len(xdata)
+    return xdataecdf, ydataecdf
+
 def findBrightfieldCutoff(brightfield,visualize=False):
 
     brightfieldDf = pd.DataFrame(brightfield)
     brightfieldDf.index.name = 'Row'
     brightfieldDf.columns.name = 'Column'
     plottingDf = brightfieldDf.stack().to_frame('Intensity')
+
+    cutoff = 3.415974411376566
+    x,y = ecdf(plottingDf['Intensity'])
+    ecdfDf = pd.DataFrame(np.vstack([x,y]).T,columns=['Intensity','Proportion'])    
+    ##Very bright image
+    if ecdfDf[ecdfDf['Proportion'] >= 0.9].iloc[0,0] > 4500:
+        #print(plottingDf.max())
+        #logDf = np.log10(plottingDf)
+        #scalingValLog = np.log10(ecdfDf[ecdfDf['Proportion'] >= 0.8].iloc[0,-2])
+        #logDf = logDf+(cutoff-scalingValLog)
+        #plottingDf = np.power(10,logDf)  
+        dfToTransform = plottingDf.copy()
+        transformedDfList = []
+        for percentile in range(0,101,4):
+            percentileVal2 = np.percentile(dfToTransform,percentile)
+            if percentile == 0:
+                vals2 = dfToTransform[dfToTransform['Intensity'] <= percentileVal2]
+            else:
+                vals2 = dfToTransform[(dfToTransform['Intensity'] <= percentileVal2) & (dfToTransform['Intensity'] > previousPercentileVal2)]
+    
+            previousPercentileVal2 = percentileVal2
+        
+            scaleFactor = vals2.mean().values[0]-referencePercentiles[percentile]
+            scaledVals = np.subtract(vals2,scaleFactor)
+            transformedDfList.append(scaledVals)
+        plottingDf = pd.concat(transformedDfList).sort_values(['Row','Column'])
+        #print(plottingDf.max())
+        #sys.exit(0)
 
     visualBrightfieldMatrix = MinMaxScaler(feature_range=(11000,65000)).fit_transform(np.clip(plottingDf.values,a_min=0,a_max=5500))
 
