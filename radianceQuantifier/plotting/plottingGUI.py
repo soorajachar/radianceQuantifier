@@ -581,7 +581,7 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         
         def createPlot():
             maxTextLength = len(max(list(groupRenamingDict.values()),key=len))
-            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,titleRenamingDict={'row':rowTitleEntry.get(),'col':columnTitleEntry.get()},groupRecoloringDict=groupRecoloringDict,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=int(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
+            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,titleRenamingDict={'row':rowTitleEntry.get(),'col':columnTitleEntry.get()},groupRecoloringDict=groupRecoloringDict,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=float(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
             tk.messagebox.showinfo(title='Success', message='Plot created!')
             self.FinishButton.config(state=tk.NORMAL)
 

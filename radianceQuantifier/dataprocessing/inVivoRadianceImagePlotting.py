@@ -380,7 +380,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={
     axWidth, axHeight = bbox.width, bbox.height
     textWidth = widthBounds*axWidth
     textSize = (textWidth-0.025496721637466635)/(maxTextLength*0.8620902)
-    fontDict['fontsize'] = int(textSize*fontScale)
+    fontDict['fontsize'] = min(40,int(textSize*fontScale))
 
     fontDict2 = fontDict.copy()
     fontDict2['fontweight'] = 'bold'
@@ -388,6 +388,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={
         fontDict2['fontsize'] = fontDict2['fontsize']*1.2
     else:
         fontDict2['fontsize'] = 12
+    
     levelTitles = []
     if kwargDict['row'] != '':
         if kwargLenDict['col'] != 1:
