@@ -167,7 +167,7 @@ def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKey
         axes[trueAxisIndices[0]].imshow(b,zorder=0, cmap='gray')
 
 #Pad all 3 levels differently (-1, 0, minVal), then stack
-def stackMouseImages(matrixList,orientation='h',unifiedPaddingShape = []):
+def stackMouseImages(matrixList,orientation='h',unifiedPaddingShape = [],staggeredPadding=False):
     if len(unifiedPaddingShape) == 0:
         maxLength = max([x.shape[0] for x in matrixList])
         maxWidth = max([x.shape[1] for x in matrixList])
@@ -195,12 +195,23 @@ def stackMouseImages(matrixList,orientation='h',unifiedPaddingShape = []):
         paddedMatrix = np.vstack(newMatrixList)
     if len(unifiedPaddingShape) != 0:
         dstackList = []
-        for i,paddingConstant in enumerate([-1,0,np.min(paddedMatrix[:,:,2])]):
-            newMatrix = np.multiply(np.ones([maxLength,maxWidth]),paddingConstant)
-            newMatrix[:paddedMatrix.shape[0],:paddedMatrix.shape[1]] = paddedMatrix[:,:,i]
-            dstackList.append(newMatrix)
+        matrixWidthSum = sum([x.shape[1] for x in matrixList])
+        paddingDifference = maxWidth-matrixWidthSum
+        if not staggeredPadding or paddingDifference < 5:
+            for i,paddingConstant in enumerate([-1,0,np.min(paddedMatrix[:,:,2])]):
+                newMatrix = np.multiply(np.ones([maxLength,maxWidth]),paddingConstant)
+                newMatrix[:paddedMatrix.shape[0],:paddedMatrix.shape[1]] = paddedMatrix[:,:,i]
+                dstackList.append(newMatrix)
+        else:
+            padPerMouse = int(paddingDifference/5)
+            for i,paddingConstant in enumerate([-1,0,np.min(paddedMatrix[:,:,2])]):
+                newMatrix = np.multiply(np.ones([maxLength,maxWidth]),paddingConstant)
+                for j,nMatrix in enumerate(newMatrixList):
+                    padStart = sum([x.shape[1]+padPerMouse for x in matrixList[:j]])
+                    newMatrix[:paddedMatrix.shape[0],padStart:padStart+nMatrix.shape[1]] = nMatrix[:,:,i]
+                dstackList.append(newMatrix)
         paddedMatrix = np.dstack(dstackList)
-        
+    
     return paddedMatrix
 
 def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargValsDict,unifiedPaddingShape=[]):
@@ -266,13 +277,13 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
                     if rightMax >= 0.5*leftMax:
                         trueBoundary = leftMaxInd+np.argmin(columnBrightfield.iloc[leftMaxInd:rightMaxInd].values)
                         sampleMatrix = sampleMatrix[:,:trueBoundary,:]
-#                         g = sns.relplot(data=columnBrightfield,x='Column',y="Value",kind='line')
-#                         g.axes.flat[0].set_title(sampleKey)
-#                         g.axes.flat[0].axvline(color='k',linestyle='--',x=trueBoundary)
+                        g = sns.relplot(data=columnBrightfield,x='Column',y="Value",kind='line')
+                        g.axes.flat[0].set_title(sampleKey)
+                        g.axes.flat[0].axvline(color='k',linestyle='--',x=trueBoundary)
                 matrixList.append(sampleMatrix) 
                 minList.append(trueMin)
-                maxList.append(trueMax)                
-            fullMatrix = stackMouseImages(matrixList,orientation='h',unifiedPaddingShape = unifiedPaddingShape)
+                maxList.append(trueMax)
+            fullMatrix = stackMouseImages(matrixList,orientation='h',unifiedPaddingShape = unifiedPaddingShape,staggeredPadding=True)
         else:
             fullMatrix = list(pMatrixDict.values())[0]
             minScale = list(minScaleDict.values())[0]
