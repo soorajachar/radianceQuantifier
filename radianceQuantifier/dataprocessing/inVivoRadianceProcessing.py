@@ -772,6 +772,8 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
 
     if save_pixel_df:
         savezDict,minScaleDict = {},{}
+        print('matrix Renaming')
+        print(matrixRenamingDict)
         for savezKey in matrixRenamingDict:
             oldFileName = matrixRenamingDict[savezKey]
             savezDict[savezKey] = np.load(base_dir+'imageMatrices/'+oldFileName+'.npy')
@@ -783,7 +785,7 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
         with open(base_dir+experimentName+'-minScale.pkl','wb') as f:
             pickle.dump(minScaleDict,f)
         #Delete temporary directory
-        shutil.rmtree(base_dir+'imageMatrices/')
+        #shutil.rmtree(base_dir+'imageMatrices/')
 
     fullDf = pd.concat(fullDfList)
     return fullDf
@@ -795,7 +797,7 @@ def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=T
     brightfieldImages = sorted([x.split('.')[0] for x in os.listdir(base_dir+'brightfield/'+day+'/') if len(x.split('.')[0]) > 1 and group in x.split('.')[0]])
 
     splitGroupDict = {}
-    if len(luminescentImages) > 1:
+    if len(luminescentImages) >= 1:
         if set(luminescentImages) == set(brightfieldImages):
             groupDfList,groupPixelDfList,groupPeaksList = [],[],[]
             splitIndex = 0
@@ -826,6 +828,7 @@ def checkSplitGroups(day,group,allPeaks,sampleNames=[],visualize=False,save_df=T
 
                 splitIndex+=len(groupDf.index.unique('Sample').tolist())
                 splitGroupDict[day+',,'+splitLuminescentFileName.split('_')[0]+',,'+','.join(groupDf.index.unique('Sample').tolist())] = positionsToKeep
+                print(splitGroupDict)
                 #splitGroupDict[day+',,'+group+',,'+','.join(groupDf.index.unique('Sample').tolist())] = positionsToKeep
                 groupDfList.append(groupDf)
                 groupPeaksList+=groupPeaks
