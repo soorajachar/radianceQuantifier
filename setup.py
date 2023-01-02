@@ -11,8 +11,8 @@ install_requires = [
 'tqdm',
 'pandas',
 'pytesseract',
-'matplotlib',
-'seaborn',
+'matplotlib>=3.3.0',
+'seaborn>=0.11.1',
 'Pillow',
 'plateypus',
 'scikit_learn',
@@ -35,7 +35,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name="radianceQuantifier",
-    version="0.4.11",
+    version="0.4.12",
     author = "Sooraj Achar",
     author_email = "acharsr@nih.gov",
     description = "Automatically crops mice and quantifies their tumor luminescences from raw IVIS images",
