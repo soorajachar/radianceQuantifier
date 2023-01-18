@@ -7,8 +7,8 @@ scipy
 tqdm
 pandas
 pytesseract
-matplotlib
-seaborn
+matplotlib>=3.3.0
+seaborn>=0.11.1
 Pillow
 plateypus
 scikit_learn

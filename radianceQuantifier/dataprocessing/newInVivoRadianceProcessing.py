@@ -344,7 +344,7 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
     verticalMouseSeparationDf = pd.DataFrame(croppedBrightfieldMatrix,index=list(range(croppedBrightfieldMatrix.shape[0])),columns=list(range(croppedBrightfieldMatrix.shape[1])))
     verticalMouseSeparationDf.index.name = 'Row'
     verticalMouseSeparationDf.columns.name = 'Column'
-    verticalMouseSeparationDf = verticalMouseSeparationDf.sum(axis=0).to_frame('Count').rolling(window=25).mean().fillna(value=0)
+    verticalMouseSeparationDf = verticalMouseSeparationDf.iloc[:int(verticalMouseSeparationDf.shape[0]/2),:].sum(axis=0).to_frame('Count').rolling(window=25).mean().fillna(value=0)
     verticalMouseSeparationDf.loc[:,:] = MinMaxScaler().fit_transform(verticalMouseSeparationDf.values)
 
     data = savgol_filter(verticalMouseSeparationDf.values.flatten(),31,2)
@@ -375,8 +375,10 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
             maxI = verticalMouseSeparationDf.shape[0]-trueMin-1
         if data[trueMin+maxI] >= data[trueMin]:
             trueMins2.append(trueMin)
-    if data[trueMins[-1]-10] >= data[trueMins[-1]]:
+    if data[trueMins[-1]-10] >= data[trueMins[-1]] or data[-1] > maxCutoff/2:
         trueMins2.append(trueMins[-1])
+        if trueMins[-1] - trueMins[-2] < minMouseWidth:
+            minMouseWidth = trueMins[-1] - trueMins[-2]
     trueMins = trueMins2
     trueCutoff = min(data) + maxCutoff * (max(data)-min(data))
     for interval in pairwise(trueMins):
@@ -407,10 +409,9 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
                 break
         finalKeptIntervals.append([leftEndpoint,rightEndpoint])
     
-    #Scale peaks by image width to keep peaks tightly clustered between images
     minPlot = min(verticalMouseSeparationDf.index.get_level_values('Column').tolist())
     maxPlot = max(verticalMouseSeparationDf.index.get_level_values('Column').tolist())
-    peaks = [(x-minPlot)/(maxPlot-minPlot) for x in peaks]
+    #peaks = [(x-minPlot)/(maxPlot-minPlot) for x in peaks]
     if visualize:
         verticalMouseSeparationDf.loc[:,:] = data.reshape(-1,1)
         g = sns.relplot(data=verticalMouseSeparationDf,x='Column',y='Count',kind='line')
