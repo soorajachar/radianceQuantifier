@@ -17,7 +17,7 @@ class ProcessExperimentWindow(tk.Frame):
         mainWindow.pack(side=tk.TOP,padx=10)
         
         l1 = tk.Label(mainWindow,text='Set color bar limits:')
-        v = tk.StringVar(value='auto')
+        v = tk.StringVar(value='manual')
         rb1a = tk.Radiobutton(mainWindow, text="Automatically (pytesseract)",padx = 20, variable=v, value='auto')
         rb1b = tk.Radiobutton(mainWindow,text="Manually",padx = 20, variable=v, value='manual')
         l1.grid(row=0,column=0)
@@ -37,7 +37,11 @@ class ProcessExperimentWindow(tk.Frame):
                 cbar_lim = [float(minEntry.get()),float(maxEntry.get())]
             
             #Radiance df
-            radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=pathToRawImages,cbar_lim=cbar_lim)
+            try:
+                radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=pathToRawImages,cbar_lim=cbar_lim)
+            except UnboundLocalError:
+                tk.messagebox.showinfo(title='Error', message='Automatic colorbar reading failed. Please manually enter color bar range.')
+
             print(radianceStatisticDf)
             
             #Survival df

@@ -417,31 +417,31 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
     maxPlot = max(verticalMouseSeparationDf.index.get_level_values('Column').tolist())
     peaks = [(x-minPlot)/(maxPlot-minPlot) for x in peaks]
 
-    start = min(finalKeptIntervals[0][0],100)
-    end = max(finalKeptIntervals[-1][-1],600)
-    numMice = 5
-    distance = (end-start)/numMice
+    #start = min(finalKeptIntervals[0][0],100)
+    #end = max(finalKeptIntervals[-1][-1],600)
+    #numMice = 5
+    #distance = (end-start)/numMice
 
-    positionIntervals = [[start+distance*i,start+distance*(i+1)] for i in range(numMice)]
-    positionList,peakList = [],[]
-    for i,keptInterval in enumerate(finalKeptIntervals):
-        ki0 = keptInterval[0]
-        ki1 = keptInterval[1]
-        percentMax = 0
-        position = 0
-        for j,positionInterval in enumerate(positionIntervals):
-            pi0 = positionInterval[0]
-            pi1 = positionInterval[1]
-            intervalDf = verticalMouseSeparationDf.query("Column > @ki0 and Column <= @ki1")
-            overallCount = intervalDf.sum().values[0]
-            withinPositionCount = intervalDf.query("Column > @pi0 and Column <= @pi1").sum().values[0]
-            percentInInterval = withinPositionCount/overallCount
-            if percentInInterval > percentMax:
-                position = j+1
-                percentMax = percentInInterval
-        peak = (positionIntervals[position-1][0]+positionIntervals[position-1][1])/2
-        positionList.append(position)
-        peakList.append(peak)
+    #positionIntervals = [[start+distance*i,start+distance*(i+1)] for i in range(numMice)]
+    #positionList,peakList = [],[]
+    #for i,keptInterval in enumerate(finalKeptIntervals):
+    #    ki0 = keptInterval[0]
+    #    ki1 = keptInterval[1]
+    #    percentMax = 0
+    #    position = 0
+    #    for j,positionInterval in enumerate(positionIntervals):
+    #        pi0 = positionInterval[0]
+    #        pi1 = positionInterval[1]
+    #        intervalDf = verticalMouseSeparationDf.query("Column > @ki0 and Column <= @ki1")
+    #        overallCount = intervalDf.sum().values[0]
+    #        withinPositionCount = intervalDf.query("Column > @pi0 and Column <= @pi1").sum().values[0]
+    #        percentInInterval = withinPositionCount/overallCount
+    #        if percentInInterval > percentMax:
+    #            position = j+1
+    #            percentMax = percentInInterval
+    #    peak = (positionIntervals[position-1][0]+positionIntervals[position-1][1])/2
+    #    positionList.append(position)
+    #    peakList.append(peak)
     
     
     if visualize:
@@ -450,15 +450,16 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
         g = sns.relplot(data=verticalMouseSeparationDf,x='Column',y='Count',kind='line')
         g.axes.flat[0].axhline(y=trueCutoff,linestyle=':',color='k')
         g.axes.flat[0].axhline(y=secondaryCutoff,linestyle=':',color='r')
-        for i,interval in enumerate(finalKeptIntervals):
+        #for i,interval in enumerate(finalKeptIntervals):
+        for interval in finalKeptIntervals:
             g.axes.flat[0].axvline(x=interval[0],linestyle=':',color='k')
             g.axes.flat[0].axvline(x=interval[1],linestyle=':',color='k')
-            g.axes.flat[0].annotate(str(positionList[i]),xy=(peakList[i]+1,0.95),color='r')
-        g.axes.flat[0].axhline(y=trueCutoff,linestyle=':',color='k')
-        g.axes.flat[0].axhline(y=secondaryCutoff,linestyle=':',color='r')
+        #    g.axes.flat[0].annotate(str(positionList[i]),xy=(peakList[i]+1,0.95),color='r')
+        #g.axes.flat[0].axhline(y=trueCutoff,linestyle=':',color='k')
+        #g.axes.flat[0].axhline(y=secondaryCutoff,linestyle=':',color='r')
     #sys.exit(0)
-    
-    return finalKeptIntervals,[x/6 for x in positionList]
+    return finalKeptIntervals,peaks
+    #return finalKeptIntervals,[x/6 for x in positionList]
 
 def fullySeparateMice(luminescentSamples,brightfieldSamples,originalBrightfieldSamples,verticalBreakpoints,horizontalBreakpoints,visualize=False):
     
