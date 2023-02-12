@@ -205,9 +205,13 @@ def returnLuminescentImageComponents(luminescent,visualize=False):
         interval = 596
     else:
         interval = 706
+    #BANDAID SOLUTION; FIND OUT WHY VERTICAL LUMINESCENT IMAGE SPLITTING VARIES SO MUCH
     if rowBreakpoints[-1] - rowBreakpoints[-2] != interval:
-      #print(rowBreakpoints)
-      rowBreakpoints[-1] = rowBreakpoints[-2]+interval
+      if luminescent.shape[0] >= rowBreakpoints[-2]+interval:
+        rowBreakpoints[-1] = rowBreakpoints[-2]+interval
+      else:
+        rowBreakpoints[-2] = rowBreakpoints[-2]-((rowBreakpoints[-2]+interval)-luminescent.shape[0])
+        rowBreakpoints[-1] = rowBreakpoints[-2]+interval
     if columnBreakpoints[1] - columnBreakpoints[0] != interval:
       #print(columnBreakpoints)
       columnBreakpoints[1] = columnBreakpoints[0]+interval
@@ -339,6 +343,7 @@ def horizontallySeparateMice(brightfieldSamples,visualize=False):
     return breakpoints
 
 def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
+   
     
     croppedBrightfieldMatrix = mouseBrightfieldMatrix[breakpoints[0]:breakpoints[1]+1,:]
     verticalMouseSeparationDf = pd.DataFrame(croppedBrightfieldMatrix,index=list(range(croppedBrightfieldMatrix.shape[0])),columns=list(range(croppedBrightfieldMatrix.shape[1])))
@@ -352,7 +357,7 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
     mins, _ = find_peaks(-1*data)
     #Further selection; mice have to be a certain distance apart
     trueMins = []
-    minMouseWidth = 90
+    minMouseWidth = 80
     minGroups = get_blocks(mins,minMouseWidth)
     for group in minGroups:
         if len(group) == 1:
@@ -411,16 +416,49 @@ def verticallySeparateMice(mouseBrightfieldMatrix,breakpoints,visualize=False):
     minPlot = min(verticalMouseSeparationDf.index.get_level_values('Column').tolist())
     maxPlot = max(verticalMouseSeparationDf.index.get_level_values('Column').tolist())
     peaks = [(x-minPlot)/(maxPlot-minPlot) for x in peaks]
+
+    start = min(finalKeptIntervals[0][0],100)
+    end = max(finalKeptIntervals[-1][-1],600)
+    numMice = 5
+    distance = (end-start)/numMice
+
+    positionIntervals = [[start+distance*i,start+distance*(i+1)] for i in range(numMice)]
+    positionList,peakList = [],[]
+    for i,keptInterval in enumerate(finalKeptIntervals):
+        ki0 = keptInterval[0]
+        ki1 = keptInterval[1]
+        percentMax = 0
+        position = 0
+        for j,positionInterval in enumerate(positionIntervals):
+            pi0 = positionInterval[0]
+            pi1 = positionInterval[1]
+            intervalDf = verticalMouseSeparationDf.query("Column > @ki0 and Column <= @ki1")
+            overallCount = intervalDf.sum().values[0]
+            withinPositionCount = intervalDf.query("Column > @pi0 and Column <= @pi1").sum().values[0]
+            percentInInterval = withinPositionCount/overallCount
+            if percentInInterval > percentMax:
+                position = j+1
+                percentMax = percentInInterval
+        peak = (positionIntervals[position-1][0]+positionIntervals[position-1][1])/2
+        positionList.append(position)
+        peakList.append(peak)
+    
+    
     if visualize:
         verticalMouseSeparationDf.loc[:,:] = data.reshape(-1,1)
+
         g = sns.relplot(data=verticalMouseSeparationDf,x='Column',y='Count',kind='line')
         g.axes.flat[0].axhline(y=trueCutoff,linestyle=':',color='k')
         g.axes.flat[0].axhline(y=secondaryCutoff,linestyle=':',color='r')
-        for interval in finalKeptIntervals:
+        for i,interval in enumerate(finalKeptIntervals):
             g.axes.flat[0].axvline(x=interval[0],linestyle=':',color='k')
             g.axes.flat[0].axvline(x=interval[1],linestyle=':',color='k')
-        
-    return finalKeptIntervals,peaks
+            g.axes.flat[0].annotate(str(positionList[i]),xy=(peakList[i]+1,0.95),color='r')
+        g.axes.flat[0].axhline(y=trueCutoff,linestyle=':',color='k')
+        g.axes.flat[0].axhline(y=secondaryCutoff,linestyle=':',color='r')
+    #sys.exit(0)
+    
+    return finalKeptIntervals,[x/6 for x in positionList]
 
 def fullySeparateMice(luminescentSamples,brightfieldSamples,originalBrightfieldSamples,verticalBreakpoints,horizontalBreakpoints,visualize=False):
     
@@ -772,8 +810,6 @@ def amendSampleNames(fullDf,allPeaks,sampleNameFile,fullSplitGroupDict,save_pixe
 
     if save_pixel_df:
         savezDict,minScaleDict = {},{}
-        print('matrix Renaming')
-        print(matrixRenamingDict)
         for savezKey in matrixRenamingDict:
             oldFileName = matrixRenamingDict[savezKey]
             savezDict[savezKey] = np.load(base_dir+'imageMatrices/'+oldFileName+'.npy')

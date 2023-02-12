@@ -41,6 +41,7 @@ def selectMatrices(pMatrix,groups='all',days='all',samples='all'):
     selectionTitle = '_'.join([groupTitle,dayTitle])
 
     selectionDict = {}
+    print(pMatrix.files)
     allDays,allGroups,allSamples = [x.split('-')[0] for x in pMatrix.files],[x.split('-')[1] for x in pMatrix.files],[x.split('-')[2] for x in pMatrix.files]
     if days == 'all':
         days = pd.unique(allDays).tolist()
