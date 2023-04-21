@@ -400,6 +400,9 @@ class MouseImageSelectionPage(tk.Frame):
         else:
             sampleNameFile = pd.read_excel(templatePath)
         
+        # remove extra columns that are empty
+        sampleNameFile = sampleNameFile.dropna(axis=1, how='all')
+        
         for i in range(sampleNameFile.shape[0]):
             for j in range(sampleNameFile.shape[1]):
                 if not pd.isna(sampleNameFile.iloc[i,j]):
