@@ -308,7 +308,7 @@ def horizontallySeparateMice(brightfieldSamples,visualize=False):
     brightfieldDf = brightfieldDf.sum(axis=1).to_frame('Count')
     brightfieldDf.loc[:,:] = MinMaxScaler().fit_transform(brightfieldDf.values)
 
-    maxPointRangeCutoff = 0.2
+    maxPointRangeCutoff = 0.4
     rangeBreakpoints = []
     for row in range(brightfieldDf.shape[0]-1,-1,-1):
         if brightfieldDf.iloc[row,0] > maxPointRangeCutoff:
