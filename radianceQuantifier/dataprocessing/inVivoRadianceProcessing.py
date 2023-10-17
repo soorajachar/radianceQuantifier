@@ -658,7 +658,7 @@ def addTrueIndexToDataframe(radianceStatisticDf,sampleNameFile):
     for row in range(sampleNameFile.shape[0]):
         sampleName = list(sampleNameFile['Group'])[row]
         time = list(sampleNameFile['Day'])[row]
-        sampleStatistics = radianceStatisticDf.xs([sampleName,time],level=['Group','Day'])
+        sampleStatistics = radianceStatisticDf.xs((sampleName,time),level=('Group','Day'))
         matrixList.append(sampleStatistics.values)
         for sample in sampleStatistics.index.unique('Sample'):
           tupleList.append(sampleNameFile.iloc[row,:].values.tolist()+[sample])
@@ -675,7 +675,7 @@ def addTrueIndexToPixelDataframe(radiancePixelDf,sampleNameFile):
     for row in range(sampleNameFile.shape[0]):
         sampleName = list(sampleNameFile['Group'])[row]
         time = list(sampleNameFile['Day'])[row]
-        sampleStatistics = radiancePixelDf.xs([sampleName,time],level=['Group','Day'])
+        sampleStatistics = radiancePixelDf.xs((sampleName,time),level=('Group','Day'))
         matrixList.append(sampleStatistics.values)
         for sample in sampleStatistics.index.unique('Sample'):
           sampleDf = sampleStatistics.query("Sample == @sample").reset_index()

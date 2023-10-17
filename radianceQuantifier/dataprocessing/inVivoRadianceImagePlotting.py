@@ -227,7 +227,7 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
                     matrixList2 = []
                     for val2 in kwargValsDict['innerCol']:
                         if val2 in selectionKeysDf.index.unique(kwargDict['innerCol']):
-                            sampleKey = selectionKeysDf.xs([val,val2],level=[kwargDict['innerRow'],kwargDict['innerCol']],drop_level=False).values[0,0]
+                            sampleKey = selectionKeysDf.xs((val,val2),level=(kwargDict['innerRow'],kwargDict['innerCol']),drop_level=False).values[0,0]
                             sampleMatrix,trueMin,trueMax = pMatrixDict[sampleKey],minScaleDict[sampleKey][0],minScaleDict[sampleKey][1]
                             matrixList2.append(sampleMatrix)
                             minList.append(trueMin)
@@ -237,13 +237,13 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
         else:
             for val in kwargValsDict['innerRow']:
                 if val in selectionKeysDf.index.unique(kwargDict['innerRow']):
-                    sampleKey = selectionKeysDf.xs([val],level=[kwargDict['innerRow']],drop_level=False).values[0,0]
+                    sampleKey = selectionKeysDf.xs((val),level=(kwargDict['innerRow']),drop_level=False).values[0,0]
                     sampleMatrix,trueMin,trueMax = pMatrixDict[sampleKey],minScaleDict[sampleKey][0],minScaleDict[sampleKey][1]
                 else:
                     for tempIndex,tempVal in enumerate(kwargValsDict['innerRow']):
                         if tempVal in selectionKeysDf.index.unique(kwargDict['innerRow']):
                             break
-                    sampleKey = selectionKeysDf.xs([selectionKeysDf.index.unique(kwargDict['innerRow']).tolist()[tempIndex]],level=[kwargDict['innerRow']],drop_level=False).values[0,0]
+                    sampleKey = selectionKeysDf.xs((selectionKeysDf.index.unique(kwargDict['innerRow']).tolist()[tempIndex]),level=(kwargDict['innerRow']),drop_level=False).values[0,0]
                     tempMatrix,trueMin,trueMax = pMatrixDict[sampleKey],minScaleDict[sampleKey][0],minScaleDict[sampleKey][1]
                     sampleMatrix = np.dstack([np.ones(tempMatrix.shape[:2])*-1,np.zeros(tempMatrix.shape[:2]),np.ones(tempMatrix.shape[:2])*np.min(tempMatrix[:,:,2])])
 
@@ -255,14 +255,14 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
         if kwargDict['innerCol'] != '':
             for val2 in kwargValsDict['innerCol']:
                 if val2 in selectionKeysDf.index.unique(kwargDict['innerCol']):
-                    sampleKey = selectionKeysDf.xs([val2],level=[kwargDict['innerCol']],drop_level=False).values[0,0]
+                    sampleKey = selectionKeysDf.xs((val2),level=(kwargDict['innerCol']),drop_level=False).values[0,0]
                     sampleMatrix,trueMin,trueMax = pMatrixDict[sampleKey],minScaleDict[sampleKey][0],minScaleDict[sampleKey][1]
                 else:
                     for tempVal in kwargValsDict['innerCol']:
                         if tempVal in selectionKeysDf.index.unique(kwargDict['innerCol']):
                             tempIndex = selectionKeysDf.index.unique(kwargDict['innerCol']).tolist().index(tempVal)
                             break
-                    sampleKey = selectionKeysDf.xs([selectionKeysDf.index.unique(kwargDict['innerCol']).tolist()[tempIndex]],level=[kwargDict['innerCol']],drop_level=False).values[0,0]
+                    sampleKey = selectionKeysDf.xs((selectionKeysDf.index.unique(kwargDict['innerCol']).tolist()[tempIndex]),level=(kwargDict['innerCol']),drop_level=False).values[0,0]
                     tempMatrix,trueMin,trueMax = pMatrixDict[sampleKey],minScaleDict[sampleKey][0],minScaleDict[sampleKey][1]
                     sampleMatrix = np.dstack([np.ones(tempMatrix.shape[:2])*-1,np.zeros(tempMatrix.shape[:2]),np.ones(tempMatrix.shape[:2])*np.min(tempMatrix[:,:,2])])
                 plottingDf = pd.DataFrame(pMatrixDict[sampleKey][:,:,1])
