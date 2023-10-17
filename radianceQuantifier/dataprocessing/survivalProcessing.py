@@ -13,10 +13,10 @@ def addPercentageToSurvivalCountDf(countDf):
     countDf = countDf.assign(Day=timeLabels).set_index('Day', append=True)
     percentDf = countDf.copy()
     initialTime = sorted(countDf.index.unique('Day').tolist())[0]
-    initialCountDf = countDf.xs([initialTime],level=['Day'])
+    initialCountDf = countDf.xs((initialTime),level=('Day'))
     percentList,tupleList = [],[]
     for day in percentDf.index.unique('Day'):
-        dayDf = percentDf.xs([day],level=['Day'])
+        dayDf = percentDf.xs((day),level=('Day'))
         initialConditions = [list(dayDf.iloc[x,:].name)[:-1] for x in range(dayDf.shape[0])]
         for row in range(initialCountDf.shape[0]):
             name = list(initialCountDf.iloc[row,:].name)[:-1]

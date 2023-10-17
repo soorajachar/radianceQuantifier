@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: radianceQuantifier
-Version: 0.4.17
+Version: 0.4.19
 Summary: Automatically crops mice and quantifies their tumor luminescences from raw IVIS images
 Home-page: https://github.com/soorajachar/radianceQuantifier
 Author: Sooraj Achar
@@ -13,6 +13,20 @@ Classifier: Operating System :: Microsoft :: Windows
 Classifier: Intended Audience :: Science/Research
 Description-Content-Type: text/markdown
 License-File: LICENSE.txt
+Requires-Dist: joblib>=1.1.0
+Requires-Dist: numpy>=1.21.1
+Requires-Dist: opencv_python
+Requires-Dist: colorcet
+Requires-Dist: hdbscan
+Requires-Dist: scipy
+Requires-Dist: tqdm
+Requires-Dist: pandas
+Requires-Dist: pytesseract
+Requires-Dist: matplotlib>=3.3.0
+Requires-Dist: seaborn>=0.11.1
+Requires-Dist: Pillow
+Requires-Dist: plateypus
+Requires-Dist: scikit_learn
 
 A image processing pipeline to automatically crop and quantify tumor burdens (radiance) in mice treated with bioluminescent tumors.   
 Intutitive processing of quantitative radiance data and raw mouse images is supported through a user friendly GUI interface.
