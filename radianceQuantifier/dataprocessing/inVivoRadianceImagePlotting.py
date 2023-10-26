@@ -85,7 +85,7 @@ def returnTailCropIndex(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeys
             trueVals.append(val)
             trueLevels.append(level)
             trueAxisIndices.append(index)
-    sampleKey = selectionKeysDf.xs(trueVals,level=trueLevels,drop_level=False).values[0,0]
+    sampleKey = selectionKeysDf.xs(tuple(trueVals),level=tuple(trueLevels),drop_level=False).values[0,0]
     
     if len(groupRenamingDict) != 0:
         for i,level in enumerate(trueLevels):
@@ -337,7 +337,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={
         for rowIndex in range(newSelectionKeysDf.shape[0]):
             levelValues = list(newSelectionKeysDf.iloc[rowIndex,:].name)
             levels = list(newSelectionKeysDf.index.names)
-            keysToCombine = selectionKeysDf.xs(levelValues,level=levels)
+            keysToCombine = selectionKeysDf.xs(tuple(levelValues),level=tuple(levels))
             newKey = newSelectionKeysDf.iloc[rowIndex,0]
             concatenatedImage,minScale = concatenateImage(pMatrixDict,minScaleDict,keysToCombine,kwargDict,kwargValsDict)
             newPmatrixDict[newKey] = concatenatedImage
@@ -349,7 +349,7 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={
             for rowIndex in range(newSelectionKeysDf.shape[0]):
                 levelValues = list(newSelectionKeysDf.iloc[rowIndex,:].name)
                 levels = list(newSelectionKeysDf.index.names)
-                keysToCombine = selectionKeysDf.xs(levelValues,level=levels)
+                keysToCombine = selectionKeysDf.xs(tuple(levelValues),level=tuple(levels))
                 newKey = newSelectionKeysDf.iloc[rowIndex,0]
                 concatenatedImage,minScale = concatenateImage(pMatrixDict,minScaleDict,keysToCombine,kwargDict,kwargValsDict,unifiedPaddingShape=unifiedPaddingShape)
                 newPmatrixDict[newKey] = concatenatedImage
