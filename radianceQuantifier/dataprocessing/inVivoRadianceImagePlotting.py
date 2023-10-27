@@ -125,7 +125,7 @@ def plotSingleMouseImage(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKey
             trueVals.append(val)
             trueLevels.append(level)
             trueAxisIndices.append(index)
-    sampleKey = selectionKeysDf.xs(trueVals,level=trueLevels,drop_level=False).values[0,0]
+    sampleKey = selectionKeysDf.xs(tuple(trueVals),level=tuple(trueLevels),drop_level=False).values[0,0]
     
     if len(groupRenamingDict) != 0:
         for i,level in enumerate(trueLevels):
