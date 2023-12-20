@@ -9,6 +9,7 @@ from radianceQuantifier.dataprocessing.miscFunctions import setMaxWidth
 from radianceQuantifier.setup.experimentCreationGUI import NewExperimentWindow,NewProjectWindow,RemoveProjectWindow
 from radianceQuantifier.setup.experimentSetupGUI import ExperimentSetupStartPage
 from radianceQuantifier.setup.processExperimentGUI import ProcessExperimentWindow 
+from radianceQuantifier.setup.modelExperimentGUI import ModelExperimentWindow 
 from radianceQuantifier.plotting.plottingGUI import PlotExperimentWindow 
 import radianceQuantifier
 
@@ -21,7 +22,7 @@ else:
 class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
-        self.title('radianceQuantifier '+version('radianceQuantifier'))
+        self.title('radianceQuantifier '+version('radianceQuantifier')+' - Adam')
         self._frame = None
         self.homedirectory = dirSep.join(os.path.abspath(radianceQuantifier.__file__).split(dirSep)[:-1])
         if self.homedirectory[-1] != '/':
@@ -118,10 +119,12 @@ class ExperimentActionWindow(tk.Frame):
         rb1a = tk.Radiobutton(mainWindow, text="Setup experiment",padx = 20, variable=v, value='se')
         rb1b = tk.Radiobutton(mainWindow,text="Process experiment",padx = 20, variable=v, value='pd')
         rb1c = tk.Radiobutton(mainWindow,text="Plot experiment",padx = 20, variable=v, value='plt')
+        rb1d = tk.Radiobutton(mainWindow,text="Model experiment",padx = 20, variable=v, value='mdl')
         l1.grid(row=0,column=0)
         rb1a.grid(row=1,column=0,sticky=tk.W)
         rb1b.grid(row=2,column=0,sticky=tk.W)
         rb1c.grid(row=3,column=0,sticky=tk.W)
+        rb1c.grid(row=4,column=0,sticky=tk.W)
         
         def collectInput():
             action = v.get()
@@ -173,6 +176,8 @@ class ExperimentActionWindow(tk.Frame):
                     #tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
             elif action == 'plt':
                 master.switch_frame(PlotExperimentWindow,selectedExperiment,ExperimentActionWindow)
+            elif action == 'mdl':
+                master.switch_frame(ModelExperimentWindow,selectedExperiment,ExperimentActionWindow)
 
         def backCommand():
             os.chdir(master.homedirectory)
