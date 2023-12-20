@@ -125,6 +125,8 @@ class NewExperimentWindow(tk.Frame):
             subfolders = ['inputData','outputData','plots','misc']
             for subfolder in subfolders:
                 os.mkdir(pathName+projectName+'/'+experimentName+'/'+subfolder)
+                if subfolder == 'plots':
+                    os.mkdir(pathName+projectName+'/'+experimentName+'/'+subfolder+'/Image Processing')
             
             tk.messagebox.showinfo("Experiment Created", "Experiment\n"+experimentName+"\nin Project \n"+projectName+"\nhas been created.")
 
