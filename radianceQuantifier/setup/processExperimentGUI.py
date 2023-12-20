@@ -2,7 +2,7 @@
 import pickle, os, json, math, subprocess, numpy as np, pandas as pd, tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
-from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline
+from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline_part1, fullInVivoImageProcessingPipeline_part2
 from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf
 
 if os.name == 'nt':
@@ -38,11 +38,11 @@ class ProcessExperimentWindow(tk.Frame):
             
             #Radiance df
             try:
-                radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=pathToRawImages,cbar_lim=cbar_lim)
+                radianceStatisticDf = fullInVivoImageProcessingPipeline_part1(sampleNameFile,save_pixel_df=True,pathToRawImages=pathToRawImages,cbar_lim=cbar_lim)
             except UnboundLocalError:
                 tk.messagebox.showinfo(title='Error', message='Automatic colorbar reading failed. Please manually enter color bar range.')
 
-            print(radianceStatisticDf)
+            # print(radianceStatisticDf)
             
             #Survival df
             #Legacy formatting
@@ -52,6 +52,11 @@ class ProcessExperimentWindow(tk.Frame):
             #Create ungrouped survival dataframe
             survivalDf = createSurvivalDf(subsetDf,[],selectedExperiment,saveDf=True)
             
+            # tk.messagebox.showinfo(title='Success', message='Part 1 of experiment processing complete!')
+
+            # new processing steps
+            processed_df = fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True)
+            print(processed_df)
             tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
             master.switch_frame(backPage, selectedExperiment)
 
