@@ -74,53 +74,29 @@ class RadianceRegionSelectionWindow(tk.Frame):
             '''
             Function to handle the checkbutton selection for the region selection to calculate radiance from images.
             '''
-            # define dictionary with regions for radiance calculation
-            # [(top,bottom),(left,right))]
-            regionDict = { 'all':[(  0, -1),( 0,-1)],
-                        'snout':[(  0, 60),(20,165)],
-                        'lungs':[( 60,110),(20,165)],
-                        'liver':[(110,210),(20,165)],
-                    'abdomen':[(210,240),(20,165)],
-                        'bmRm':[(240,320),(20,92)], # bone marrow (mouse right)
-                        'bmLm':[(240,320),(93,165)]} # bone marrow (mouse left)
-
             # handle the checkbuttons #
             
-            # selected entire image
-            if check1_var.get() == 1: 
-                calculate_radiance(left=0,right=maxWidth,top=0,bottom=maxHeight,text='all')
-            # selected snout
-            if check2_var.get() == 1:
-                calculate_radiance(left=regionDict['snout'][1][0],right=regionDict['snout'][1][1],top=regionDict['snout'][0][0],bottom=regionDict['snout'][0][1],text='snout')
-            # selected lungs
-            if check3_var.get() == 1:
-                calculate_radiance(left=regionDict['lungs'][1][0],right=regionDict['lungs'][1][1],top=regionDict['lungs'][0][0],bottom=regionDict['lungs'][0][1],text='lungs')
-            # selected liver
-            if check4_var.get() == 1:
-                calculate_radiance(left=regionDict['liver'][1][0],right=regionDict['liver'][1][1],top=regionDict['liver'][0][0],bottom=regionDict['liver'][0][1],text='liver')
-            # selected abdomen
-            if check5_var.get() == 1:
-                calculate_radiance(left=regionDict['abdomen'][1][0],right=regionDict['abdomen'][1][1],top=regionDict['abdomen'][0][0],bottom=regionDict['abdomen'][0][1],text='abdomen')
-            # selected bone marrow (right)
-            if check6_var.get() == 1:
-                calculate_radiance(left=regionDict['bmRm'][1][0],right=regionDict['bmRm'][1][1],top=regionDict['bmRm'][0][0],bottom=regionDict['bmRm'][0][1],text='bmRm')
-            # selected bone marow (left)
-            if check7_var.get() == 1:
-                calculate_radiance(left=regionDict['bmLm'][1][0],right=regionDict['bmLm'][1][1],top=regionDict['bmLm'][0][0],bottom=regionDict['bmLm'][0][1],text='bmLm')
-            # selected custom region
-            if (check8_var.get() == 1) & (selected_rect is not None):
-                calculate_radiance(sel_left,sel_right,sel_top,sel_bottom,text='custom')
-
             # error handling
             error_flag = False
             if (check8_var.get() == 1) & (selected_rect is None): # selected custom region, but didn't draw rectangle
-                print('Please choose a custom region.')
                 error_flag = True
-            if (check1_var.get() == 0) & (check2_var.get() == 0) & (check3_var.get() == 0) & (check4_var.get() == 0) & (check5_var.get() == 0) & (check6_var.get() == 0) & (check7_var.get() == 0) & (check8_var.get() == 0): # no buttons selected
-                print('Please select a button.')
+                tk.messagebox.showinfo(title='ERROR', message='Please draw a custom region.')
+            if (check1_var.get() == 0) & (check8_var.get() == 0): # no buttons selected
                 error_flag = True
+                tk.messagebox.showinfo(title='ERROR', message='Please select a button.')
+            if (check8_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) == 0):
+                error_flag = True
+                tk.messagebox.showinfo(title='ERROR', message='Please enter a name for the selected region.')
 
-            if ~error_flag: tk.messagebox.showinfo(title='Success', message='Radiance calculation complete!\nSelect another region or click "Finished" to return to main window.')
+
+            # selected entire image
+            if (check1_var.get() == 1) & (error_flag == False): 
+                calculate_radiance(left=0,right=maxWidth,top=0,bottom=maxHeight,text='all')
+                tk.messagebox.showinfo(title='Success', message='Radiance calculation complete!\nSelect another region or click "Finished" to return to main window.')
+            # selected custom region
+            if (check8_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) > 0) & (error_flag == False):
+                calculate_radiance(sel_left,sel_right,sel_top,sel_bottom,text=roi_entry.get())
+                tk.messagebox.showinfo(title='Success', message='Radiance calculation complete!\nSelect another region or click "Finished" to return to main window.')
 
 
         # Display average image
@@ -142,50 +118,35 @@ class RadianceRegionSelectionWindow(tk.Frame):
         # Initialize variables
         rect_coordinates = tk.StringVar()
         rect_coordinates_label = tk.Label(mainWindow, textvariable=rect_coordinates)
-        rect_coordinates_label.grid(row=8, column=3, sticky='nw')
+        rect_coordinates_label.grid(row=5, column=0, sticky='nw')
 
         # Set up check buttons
         # initialize
         check1_var = tk.IntVar() # entire mouse
-        check2_var = tk.IntVar() # snout
-        check3_var = tk.IntVar() # lungs
-        check4_var = tk.IntVar() # liver
-        check5_var = tk.IntVar() # abdomen
-        check6_var = tk.IntVar() # bone marrow (right)
-        check7_var = tk.IntVar() # bone marrow (left)
         check8_var = tk.IntVar() # custom region
-        # make button
+        
+        # make buttons
         check1 = tk.Checkbutton(mainWindow, text="Entire Image", variable=check1_var)
-        check2 = tk.Checkbutton(mainWindow, text="Snout", variable=check2_var)
-        check3 = tk.Checkbutton(mainWindow, text="Lungs", variable=check3_var)
-        check4 = tk.Checkbutton(mainWindow, text="Liver", variable=check4_var)
-        check5 = tk.Checkbutton(mainWindow, text="Abdomen", variable=check5_var)
-        check6 = tk.Checkbutton(mainWindow, text="Bone Marrow (right)", variable=check6_var)
-        check7 = tk.Checkbutton(mainWindow, text="Bone Marrow (left)", variable=check7_var)
         check8 = tk.Checkbutton(mainWindow, text="Custom Region", variable=check8_var)
+        roi_entry_label = tk.Label(mainWindow, text="ROI Name:")
+        roi_entry = tk.Entry(mainWindow)
+       
         # layout for buttons
         check1.grid(row=0, column=3, sticky='w')
-        check2.grid(row=1, column=3, sticky='w',)
-        check3.grid(row=2, column=3, sticky='w')
-        check4.grid(row=3, column=3, sticky='w')
-        check5.grid(row=4, column=3, sticky='w')
-        check6.grid(row=5, column=3, sticky='w')
-        check7.grid(row=6, column=3, sticky='w')
-        check8.grid(row=7, column=3, sticky='w')
-
+        check8.grid(row=1, column=3, sticky='w')
+        roi_entry_label.grid(row=1, column=4, sticky='w')
+        roi_entry.grid(row=1, column=5, sticky='w')
+        
         # Create a button to confirm the selection
         confirm_button = tk.Button(mainWindow, text="Calculate Radiance", command=(lambda : handle_checkbutton_region_selection()))
-        confirm_button.grid(row=9, column=3, sticky='n')
+        confirm_button.grid(row=2, column=3, sticky='n')
 
         # Bind mouse events for rectangle drawing
         canvas.bind("<Button-1>", on_canvas_click)
         canvas.bind("<B1-Motion>", on_canvas_drag)
 
-
-
         # navigation buttons
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=(tk.TOP), pady=10)
-        tk.Button(buttonWindow, text='Finished', command=(lambda : master.switch_frame(originPage, selectedExperiment))).grid(row=10, column=3)
-        tk.Button(buttonWindow, text='Back', command=(lambda : master.switch_frame(backPage, selectedExperiment))).grid(row=10, column=4)
-        tk.Button(buttonWindow, text='Quit', command=quit).grid(row=10, column=5)
+        tk.Button(buttonWindow, text='Finished', command=(lambda : master.switch_frame(originPage, selectedExperiment))).grid(row=10, column=1)
+        tk.Button(buttonWindow, text='Quit', command=quit).grid(row=10, column=3)
