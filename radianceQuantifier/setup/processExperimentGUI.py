@@ -4,6 +4,7 @@ from tkinter import ttk
 from tkinter import filedialog as fd
 from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline_part1, fullInVivoImageProcessingPipeline_part2
 from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf
+from radianceQuantifier.setup.radianceRegionSelectionGUI import RadianceRegionSelectionWindow 
 
 if os.name == 'nt':
     dirSep = '\\'
@@ -55,10 +56,16 @@ class ProcessExperimentWindow(tk.Frame):
             # tk.messagebox.showinfo(title='Success', message='Part 1 of experiment processing complete!')
 
             # new processing steps
-            processed_df = fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True)
+            processed_df, maxWidth, maxHeight = fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True)
             print(processed_df)
             tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
-            master.switch_frame(backPage, selectedExperiment)
+
+            # open window to chose region for radiance calculation
+            master.switch_frame(RadianceRegionSelectionWindow, ProcessExperimentWindow, backPage, selectedExperiment, maxWidth, maxHeight)
+
+
+
+            # master.switch_frame(backPage, selectedExperiment)
 
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=(tk.TOP), pady=10)

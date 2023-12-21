@@ -1063,14 +1063,14 @@ def fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True):
   full_df = generate_mouseIDs(radianceStatisticDf) # label with unique mouse IDs
   full_df = replace_background(full_df) # fix background values
 
-  processed_df = merge_images(full_df, npz_dir, minScale_dir) # merge all mice images
+  processed_df, maxWidth, maxHeight = merge_images(full_df, npz_dir, minScale_dir) # merge all mice images
 
   # save data
   if save_df:
     processed_df.to_pickle(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.pkl')
     processed_df.to_excel(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.xlsx')
 
-  return processed_df
+  return processed_df, maxWidth, maxHeight
 
 
 def generate_mouseIDs(radianceStatisticDf):
@@ -1571,10 +1571,10 @@ def merge_images(merged_data, npz_dir, minScale_dir):
     imagesIDs2ignore = slanted_imageIDs + abnormal_imageIDs
     
     # save bad image IDs
-    badIDs_file = open(f'misc/imagesIDs2ignore.pkl', 'wb') 
+    badIDs_file = open(f'misc/imagesIDs2ignore-{os.getcwd().split(dirSep)[-1]}.pkl', 'wb') 
     pickle.dump(imagesIDs2ignore,badIDs_file)
     badIDs_file.close()
-    np.savetxt('misc/imagesIDs2ignore.txt',imagesIDs2ignore,fmt='%d',delimiter=',')
+    np.savetxt(f'misc/imagesIDs2ignore-{os.getcwd().split(dirSep)[-1]}.txt',imagesIDs2ignore,fmt='%d',delimiter=',')
     
     # get max width across all scaled images
     print('Padding images to same width')
@@ -1604,9 +1604,116 @@ def merge_images(merged_data, npz_dir, minScale_dir):
     background[mouseMask] = avgRadianceMatrix[mouseMask] # replace pixels on mouse with radiance values              
     background[~mouseMask] = -999 # make background pixels not on mouse black (ignored by colormap)
     plt.imshow(background,cmap='turbo') # ,norm=matplotlib.colors.LogNorm(vmin,vmax) # normalize color only for radiance
-    plt.savefig(f'plots/Image Processing/avg_merged_image.pdf',format='pdf',bbox_inches='tight')
+    plt.savefig(f'plots/Image Processing/avg_merged_image-{os.getcwd().split(dirSep)[-1]}.pdf',format='pdf',bbox_inches='tight')
     plt.axis('off')
-    plt.savefig(f'plots/Image Processing/avg_merged_image.png',format='png',bbox_inches='tight',pad_inches=0) # need png to display in window
+    plt.savefig(f'plots/Image Processing/avg_merged_image-{os.getcwd().split(dirSep)[-1]}.png',format='png',bbox_inches='tight',pad_inches=0) # need png to display in window
     print('Average image saved.')
 
-    return labelDf_all.set_index(['vmin','vmax'],append=True)
+    return labelDf_all.set_index(['vmin','vmax'],append=True), maxWidth, maxHeight
+
+def calculate_radiance_from_merged_images(matrix,labelDf,imagesIDs2ignore,image_dir):
+  '''
+  Function to calculate the radiance from the rescalled/merged images.
+  '''
+
+  img_list = list(labelDf.ImageID.values) # imageIDs
+  img_list = [idx for idx in img_list if idx not in imagesIDs2ignore] # remove bad images
+
+  # create dataframe with average value on each day for selected region and selected mice
+  avg_vals = []
+  tot_vals = []
+  for img in tqdm(img_list): # loop through each image
+    # extract image from big matrix
+    img_matrices = matrix[:,:,:,img]
+    img_radiance = img_matrices[:,:,0]
+    img_mousePixel = img_matrices[:,:,1]
+    # img_brightfield = img_matrices[:,:,2] # not used here
+    
+    # only calculate radiance for pixels that are on the mouse as determined from the mousePixel info
+    zeros = np.zeros(img_radiance.shape) # matrix of zeros -- will add radiance values on mouse ontop of this
+    mouseMask = img_mousePixel == 1 # true/false for each pixel - true if on mouse
+    zeros[mouseMask] = img_radiance[mouseMask] # replace pixels on mouse with radiance values
+
+    # save the region/image where calculating radiance
+    plt.figure()
+    plt.imshow(zeros,cmap='turbo') # ,norm=matplotlib.colors.LogNorm(vmin,vmax) # normalize color only for radiance
+    plt.axis('off')
+    plt.savefig(f'{image_dir}/{img}_ROI.pdf')
+    
+    # calculate total and average radiance of image (ignore -999 which is from padding)
+    tot_vals.append(np.nansum([val for val in zeros.flatten() if val != -999])) # total vals in region
+    avg_vals.append(np.nanmean([val for val in zeros.flatten() if val != -999])) # average vals in region
+
+  # put values into a dataframe
+  avgValsDf = pd.DataFrame(avg_vals,index=img_list,columns=[f'avg_radiance']).rename_axis('ImageID')
+  totValsDf = pd.DataFrame(tot_vals,index=img_list,columns=[f'tot_radiance']).rename_axis('ImageID')
+
+  # add metadata information
+  print('Adding metadata')
+  mice = list(labelDf.reset_index().MouseID.unique()) # list of mice where have images
+  dfList = []
+  for mouse in tqdm(mice):
+    # filter df to have radiance for one mouse at a time
+    images = list(labelDf.query('MouseID == @mouse').reset_index().ImageID.unique()) # imageIDs for mouse
+    avg = avgValsDf.query('ImageID in @images')
+    tot = totValsDf.query('ImageID in @images')
+    
+    # create new dataframe with info on mice
+    df = avg.copy().drop(['avg_radiance'],axis=1)
+    df['MouseID']=mouse
+    df['Average Radiance']=avg.values
+    df['Total Radiance']=tot.values
+    df['Date']=labelDf.query('MouseID == @mouse').reset_index().Date.unique()[0]
+    df['ExperimentName']=labelDf.query('MouseID == @mouse').reset_index().ExperimentName.unique()[0]
+    df['Researcher']=labelDf.query('MouseID == @mouse').reset_index().Researcher.unique()[0]
+    df['CAR_Binding']=labelDf.query('MouseID == @mouse').reset_index().CAR_Binding.unique()[0]
+    df['CAR_Costimulatory']=labelDf.query('MouseID == @mouse').reset_index().CAR_Costimulatory.unique()[0]
+    df['Tumor']=labelDf.query('MouseID == @mouse').reset_index().Tumor.unique()[0] 
+    df['TumorCellNumber']=labelDf.query('MouseID == @mouse').reset_index().TumorCellNumber.unique()[0]
+    df['TCellNumber']=labelDf.query('MouseID == @mouse').reset_index().TCellNumber.unique()[0]
+    df['bloodDonorID']=labelDf.query('MouseID == @mouse').reset_index().bloodDonorID.unique()[0]
+    df['Perturbation']=labelDf.query('MouseID == @mouse').reset_index().Perturbation.unique()[0]
+    df['Group']=labelDf.query('MouseID == @mouse').reset_index().Group.unique()[0]
+    df['Sample']=labelDf.query('MouseID == @mouse').reset_index().Sample.unique()[0]
+    df['Time'] = [labelDf.query('ImageID == @imgID').reset_index().Time[0] for imgID in list(labelDf.query('MouseID == @mouse and ImageID not in @imagesIDs2ignore').ImageID.values)]
+    df['Day'] = [f'D{x}' for x in list(df.reset_index().Time)]
+
+    # sort df by time
+    df = df.sort_values(by=['Time'])
+
+    dfList.append(df)
+
+  df_from_images = pd.concat(dfList).reset_index().set_index(['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','Group','Day','Time','Sample','MouseID'])
+
+  # replace zero values and those below minimum detection per pixel of 100
+  df_from_images = replace_background(df_from_images) # fix background values
+
+  return df_from_images
+
+
+def calculate_radiance(left,right,top,bottom,text):
+    '''
+    Function to calculate the radiance from the rescalled/merged images.
+    Inputs:
+        left, right, top, bottom -- coordinates of rectangle to calculate radiance
+        text -- string for selected region
+    '''
+    print(f'Calculating Radiance ({text}): left={left}, top={top}, right={right}, bottom={bottom}.')
+    # reload in the data
+    matrix = np.load(f'outputData/bigMatrix-{os.getcwd().split(dirSep)[-1]}.npy') # reload the raw image data
+    labelDf_all = pd.read_hdf(f'outputData/labelDf_all-{os.getcwd().split(dirSep)[-1]}.hdf') # reload data that now has metadata for each image
+    labelDf = labelDf_all.drop(['Average Pixel Intensity','Average Radiance','Total Radiance','Tumor Fraction'],axis=1).reset_index(['ImageID']) # only want the metadata
+    imagesIDs2ignore = loadPickle(f'misc/imagesIDs2ignore-{os.getcwd().split(dirSep)[-1]}.pkl')
+
+    # crop matrix depending on input parameter region
+    matrixRegion = matrix[top:bottom,left:right,:,:]
+
+    # calculate radiance for each image
+    image_dir = f'plots/Image Processing/ROI Radiance Calculation/left{left}_top{top}_right{right}_bottom{bottom}_{text}'
+    if not os.path.exists(image_dir): os.makedirs(image_dir) # make dir to save figures if it doesn't already exist
+    df_from_images = calculate_radiance_from_merged_images(matrixRegion,labelDf,imagesIDs2ignore,image_dir)
+
+    data_dir = 'outputData/ROI Radiance Calculation'
+    if not os.path.exists(f'{data_dir}/left{left}_top{top}_right{right}_bottom{bottom}_{text}'): os.makedirs(f'{data_dir}/left{left}_top{top}_right{right}_bottom{bottom}_{text}') # make dir to save merged radiance data if it doesn't already exist
+    df_from_images.to_pickle(f'{data_dir}/left{left}_top{top}_right{right}_bottom{bottom}_{text}/{os.getcwd().split(dirSep)[-1]}_df_from_images_left{left}_top{top}_right{right}_bottom{bottom}_{text}.pkl')
+    print(f'Dataframe with calculated radiance ({text}: left={left}, top={top}, right={right}, bottom={bottom}) saved.')
