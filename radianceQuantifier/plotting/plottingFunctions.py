@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import cv2
 
+if os.name == 'nt':
+    dirSep = '\\'
+else:
+    dirSep = '/'
 
 def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir, bayesian_key):
   '''
@@ -228,7 +232,7 @@ def plot_slanted_image(matrix, i, b, m, plot_dir):
   plt.imshow(cv2.rotate(matrix[:,:,2],cv2.ROTATE_90_CLOCKWISE),cmap='Greys_r',origin='lower')
   plt.axline(xy1=(0, (matrix[:,:,2].shape[1] - b)), slope=-m) # image was originally flipped
   plt.title(f'ImageID: {i} (Angle = {np.round(angle,2)})')
-  plt.savefig(f'{plot_dir}/slanted_image_{i}.pdf',format='pdf',bbox_inches='tight')
+  plt.savefig(f'{plot_dir}/{os.getcwd().split(dirSep)[-1]}-slanted_image_{i}.pdf',format='pdf',bbox_inches='tight')
 
 def slanted_images_summary_plot(angle_df, thresh, plot_dir):
   '''
@@ -252,7 +256,7 @@ def slanted_images_summary_plot(angle_df, thresh, plot_dir):
   plt.xlabel('Angle of Slant')
   plt.text(2,0.3,s=f'{angle_df.shape[0]-angle_df[angle_df>thresh].count()[0]}\nimages',fontsize='x-small');
   plt.text(10,0.3,s=f'{angle_df[angle_df>thresh].count()[0]}\nimages',fontsize='x-small');
-  plt.savefig(f'{plot_dir}/slanted_images_KDE_rug_plot.pdf',format='pdf',bbox_inches='tight')
+  plt.savefig(f'{plot_dir}/slanted_images_KDE_rug_plot-{os.getcwd().split(dirSep)[-1]}.pdf',format='pdf',bbox_inches='tight')
 
 def plot_image_widths(matrixList, matrix_rescaled_list, plot_dir):
   '''
@@ -276,7 +280,7 @@ def plot_image_widths(matrixList, matrix_rescaled_list, plot_dir):
   plt.xlim([80,300])
   plt.legend()
   plt.xlabel('Widths')
-  plt.savefig(f'{plot_dir}/KDE_widths_pre_post_height_scaling.pdf',format='pdf',bbox_inches='tight')
+  plt.savefig(f'{plot_dir}/KDE_widths_pre_post_height_scaling-{os.getcwd().split(dirSep)[-1]}.pdf',format='pdf',bbox_inches='tight')
 
 def plot_image(matrix, idx, type, plot_dir):
   '''
@@ -304,5 +308,5 @@ def plot_image(matrix, idx, type, plot_dir):
   plt.figure()
   plt.imshow(matrix[:,:,typeDict[type]],cmap='Greys_r')
   plt.title(f'{idx}')
-  plt.savefig(f'{plot_dir}/mouseImage_{idx}_{type}.pdf',format='pdf',bbox_inches='tight')
+  plt.savefig(f'{plot_dir}/{os.getcwd().split(dirSep)[-1]}-mouseImage_{idx}_{type}.pdf',format='pdf',bbox_inches='tight')
 
