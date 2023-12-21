@@ -124,7 +124,7 @@ class ExperimentActionWindow(tk.Frame):
         rb1a.grid(row=1,column=0,sticky=tk.W)
         rb1b.grid(row=2,column=0,sticky=tk.W)
         rb1c.grid(row=3,column=0,sticky=tk.W)
-        rb1c.grid(row=4,column=0,sticky=tk.W)
+        rb1d.grid(row=4,column=0,sticky=tk.W)
         
         def collectInput():
             action = v.get()
