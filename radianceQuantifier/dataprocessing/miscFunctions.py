@@ -454,3 +454,24 @@ def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
             cell.set_facecolor(row_colors[k[0]%len(row_colors) ])
             cell.set_text_props(ha='center', va='center')
     return ax.get_figure(), ax
+
+def add_category_labels(df_all_rates):
+  '''
+  Add column that has all the phases for an individual mouse.
+  '''
+
+  # add category label to all data
+  df_all_rates['Categories'] = df_all_rates.reset_index().groupby('MouseID')['Phase'].transform(lambda x: ' + '.join(x.unique())).values
+
+  ## correct categories for cases when have data before CAR-T infusion ##
+  # correcting "Growth + Decay"
+  mice = df_all_rates.query('Time<0 and StartDecay==0 and Categories=="Growth + Decay"').reset_index().MouseID.unique()
+  condition = list(df_all_rates.reset_index()['MouseID'].isin(mice))
+  df_all_rates.loc[condition, ['Categories']] = 'Decay'
+
+  # correcting "Growth + Decay + Relapse"
+  mice = df_all_rates.query('Time<0 and StartDecay==0 and Categories=="Growth + Decay + Relapse"').reset_index().MouseID.unique()
+  condition = list(df_all_rates.reset_index()['MouseID'].isin(mice))
+  df_all_rates.loc[condition, ['Categories']] = 'Decay + Relapse'
+
+  return df_all_rates
