@@ -36,73 +36,11 @@ from tqdm.auto import trange, tqdm
 from scipy.signal import argrelmin,find_peaks,savgol_filter
 import warnings
 import shutil
+from radianceQuantifier.dataprocessing.miscFunctions import loadPickle, selectMatrices, loadNPZ
 
 warnings.filterwarnings("ignore")
 
 referencePercentiles = [155,191,213,229,240,249,256,261,266,270,273,277,280,283,286,288,292,295,297,299,303,305,307,310,312,314,316,318,321,323,325,327,329,331,333,335,337,340,342,344,346,349,351,354,356,359,362,365,368,371,375,379,383,387,392,398,404,410,418,426,437,450,466,487,511,538,570,609,656,715,793,893,1012,1162,1351,1571,1789,1996,2190,2366,2526,2686,2850,3015,3172,3325,3461,3585,3706,3818,3922,4019,4112,4201,4289,4379,4475,4576,4690,4844,5713]
-
-def loadPickle(path):
-  '''
-  Loads a .pkl file from path
-  '''
-  with open(path,"rb") as my_pkl:
-    data = pickle.load(my_pkl)
-
-  return data
-
-def selectMatrices(pMatrix,groups='all',days='all',samples='all'):
-    '''
-    Select image matrices from .npz files (originally from Sooraj's Radiance Quantifier)
-    '''
-    if groups != 'all':
-        groupValString = ','.join(groups)
-    else:
-        groupValString = 'all'
-    groupTitle = '-'.join(['Group',groupValString])
-    if days != 'all':
-        dayValString = ','.join(days)
-    else:
-        dayValString = 'all'
-    dayTitle = '-'.join(['Day',dayValString])
-    selectionTitle = '_'.join([groupTitle,dayTitle])
-
-    selectionDict = {}
-    allDays,allGroups,allSamples = [x.split('-')[0] for x in pMatrix.files],[x.split('-')[1] for x in pMatrix.files],[x.split('-')[2] for x in pMatrix.files]
-    if days == 'all':
-        days = pd.unique(allDays).tolist()
-    if groups == 'all':
-        groups = pd.unique(allGroups).tolist()
-    if samples == 'all':
-        samples = pd.unique(allSamples).tolist()
-    if type(days) != list:
-        days = [days]
-    if type(groups) != list:
-        groups = [groups]
-    if type(samples) != list:
-        samples = [samples]
-    selectionKeysList = []
-    for day in days:
-        for group in groups:
-            for sample in samples:
-                fullKey = '-'.join([day,group,sample])
-                if fullKey in pMatrix.files:
-                    selectionDict[fullKey] = pMatrix[fullKey]
-                    selectionKeysList.append([day,group,sample])
-                    
-    selectionKeyMI = pd.MultiIndex.from_tuples(selectionKeysList,names=['Day','Group','Sample'])
-    selectionKeyDf = pd.DataFrame(list(selectionDict.keys()),index=selectionKeyMI,columns=['Key'])    
-    
-    return selectionDict,selectionKeyDf,selectionTitle
-
-def loadNPZ(filename,groups='all',days='all',samples='all'):
-  '''
-  Loads a .npz file from path
-  '''
-  pMatrix = np.load(filename,allow_pickle=True)
-
-  selectionDict,selectionKeyDf,selectionTitle = selectMatrices(pMatrix,groups,days,samples)
-
-  return selectionDict,selectionKeyDf,selectionTitle
 
 def ranges(nums):
     nums = sorted(set(nums))

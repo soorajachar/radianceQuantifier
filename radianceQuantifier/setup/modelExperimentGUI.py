@@ -2,7 +2,7 @@
 import pickle, os, json, math, subprocess, numpy as np, pandas as pd, tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
-from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import loadPickle 
+from radianceQuantifier.dataprocessing.miscFunctions import loadPickle
 from radianceQuantifier.dataprocessing.modelingFunctions import identify_phases, fit_data, get_rates, make_bayesian_plots
 
 if os.name == 'nt':
