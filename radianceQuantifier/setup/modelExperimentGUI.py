@@ -63,7 +63,7 @@ class ModelExperimentWindow(tk.Frame):
             mice_fit_df_noBayesian = fit_data(data=phases_df,alphas=alphas)  # no Bayesian Priors
             # save the data
             if not os.path.exists(f'{data_dir}/{selected_region_str}/BayesianPriors'): os.makedirs(f'{data_dir}/{selected_region_str}/BayesianPriors') # make dir if doesn't exist
-            mice_fit_df_noBayesian.to_pickle(f'{data_dir}/{selected_region_str}/BayesianPriors/fit2model_all_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}_{alphas[3]}_{alphas[4]}_{selected_region_str}.pkl')
+            mice_fit_df_noBayesian.to_pickle(f'{data_dir}/{selected_region_str}/BayesianPriors/{os.getcwd().split(dirSep)[-1]}_fit2model_all_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}_{alphas[3]}_{alphas[4]}_{selected_region_str}.pkl')
     
             # initial mean and stdev of pop INCLUDING outliers -- before Bayesian priors
             growth_rates, decay_rates, relapse_rates = get_rates(mice_fit_df_noBayesian,include_outliers=True) # extract the rates from the df
