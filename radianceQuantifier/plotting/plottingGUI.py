@@ -153,6 +153,8 @@ class PlotExperimentWindow(tk.Frame):
                 plot_dir = 'plots/Summary Sheets'
 
                 plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir)
+                tk.messagebox.showinfo(title='Success', message='Summary sheet successfully created for each mouse.')
+
 
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=tk.TOP,pady=10)

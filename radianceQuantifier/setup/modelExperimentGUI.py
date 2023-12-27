@@ -3,7 +3,8 @@ import pickle, os, json, math, subprocess, numpy as np, pandas as pd, tkinter as
 from tkinter import ttk
 from tkinter import filedialog as fd
 from radianceQuantifier.dataprocessing.miscFunctions import loadPickle
-from radianceQuantifier.dataprocessing.modelingFunctions import identify_phases, fit_data, get_rates, make_bayesian_plots
+from radianceQuantifier.dataprocessing.modelingFunctions import identify_phases, fit_data, get_rates
+from radianceQuantifier.plotting.plottingFunctions import make_bayesian_plots
 
 if os.name == 'nt':
     dirSep = '\\'
@@ -41,7 +42,7 @@ class ModelExperimentWindow(tk.Frame):
 
             selected_region.trace("w", on_region_selected) # update to be region chosen from dropdown
             selected_region_str = selected_region.get() # convert selected region from tk.StringVar to actual string
-            print(f'Modeling {selected_region_str.split("_")[-1]} region:')
+            print(f'Modeling {"_".join(selected_region_str.split("_")[4:])} region:')
             
             '''
             Identify Growth, Decay, and Relapse phases.
@@ -76,8 +77,8 @@ class ModelExperimentWindow(tk.Frame):
             plot_dir = f'plots/Before Bayesian Priors/{selected_region_str}'
             make_bayesian_plots(mice_fit_df_noBayesian,growth_rates,decay_rates,relapse_rates,plot_dir,bayesian_key='Before')
     
-
-
+            # success notification
+            tk.messagebox.showinfo(title='Success', message='Modeling finished successfully.')
 
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=(tk.TOP), pady=10)

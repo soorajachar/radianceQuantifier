@@ -87,16 +87,21 @@ class RadianceRegionSelectionWindow(tk.Frame):
             if (check8_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) == 0):
                 error_flag = True
                 tk.messagebox.showinfo(title='ERROR', message='Please enter a name for the selected region.')
-
+            if (check8_var.get() == 1) & (selected_rect is not None) & (roi_entry.get().lower() == 'all'):
+                error_flag = True
+                tk.messagebox.showinfo(title='ERROR', message='Invalid custom name. Please enter a different name for the selected region.')
 
             # selected entire image
+            finished_bool = False
             if (check1_var.get() == 1) & (error_flag == False): 
                 calculate_radiance(left=0,right=maxWidth,top=0,bottom=maxHeight,text='all')
-                tk.messagebox.showinfo(title='Success', message='Radiance calculation complete!\nSelect another region or click "Finished" to return to main window.')
+                finished_bool = True
             # selected custom region
             if (check8_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) > 0) & (error_flag == False):
                 calculate_radiance(sel_left,sel_right,sel_top,sel_bottom,text=roi_entry.get())
-                tk.messagebox.showinfo(title='Success', message='Radiance calculation complete!\nSelect another region or click "Finished" to return to main window.')
+                finished_bool = True
+            
+            if finished_bool == True: tk.messagebox.showinfo(title='Success', message='Radiance calculation complete!\nSelect another region or click "Finished" to return to main window.')
 
 
         # Display average image

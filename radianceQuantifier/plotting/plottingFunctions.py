@@ -824,6 +824,8 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
   Figure 4 -- summary table with information on the mouse/experiment conditions/tumor behavior
   '''
 
+  print('\nGenerating summary sheet for each mouse:')
+
   tqdm.__init__ = partialmethod(tqdm.__init__, disable=True) # disable all other tqdm outputs
 
   # make dir to save figures if it doesn't already exist
@@ -835,7 +837,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
   try: os.remove(f'{plot_dir}/double_colorscale.txt')
   except OSError: pass
 
-  mice = df_all_rates.reset_index().MouseID.unique()
+  mice = np.sort((df_all_rates.reset_index().MouseID.unique()))
   for mouse in tqdm(mice,disable=False):
       # set up axes for plots
       ncols = df_all_rates.query('MouseID == @mouse').shape[0]
@@ -869,14 +871,18 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       region_df_list = []
       regions2choose = [item for item in os.listdir('outputData/ROI Radiance Calculation') if item.startswith('left')]
       for region_long in regions2choose: # loop through all regions and load in the dataframe
-        region_short = region_long.split("_")[-1] # get region name
-        region_df = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/BayesianPriors/{os.getcwd().split(dirSep)[-1]}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl')
-        region_df['Region'] = region_short
-        region_df_list.append(region_df)
+        region_short = "_".join(region_long.split("_")[4:]) # get region name
+        if region_short != 'all': # don't include full "all" region
+          region_df = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/BayesianPriors/{os.getcwd().split(dirSep)[-1]}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl')
+          region_df = region_df.query('MouseID == @mouse') # only get info for individual mouse
+          region_df['Region'] = region_short
+          region_df_list.append(region_df)
 
       if len(region_df_list) == 1: df_all_regions = region_df.copy()
       else: df_all_regions = pd.concat(region_df_list)
       
+      df_all_regions.to_pickle(f'misc/df_all_regions_DEBUG.pkl')
+
       # tumor region plot
       g=sns.lineplot(data=df_all_regions.reset_index(),x='Time',y='Average Radiance',marker='o',hue='Region',legend=True,ax=axs3);
       g.set_yscale('log')
