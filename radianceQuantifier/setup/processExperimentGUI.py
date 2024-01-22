@@ -2,8 +2,9 @@
 import pickle, os, json, math, subprocess, numpy as np, pandas as pd, tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
-from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline
+from radianceQuantifier.dataprocessing.inVivoRadianceProcessing import fullInVivoImageProcessingPipeline_part1, fullInVivoImageProcessingPipeline_part2
 from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf
+from radianceQuantifier.setup.radianceRegionSelectionGUI import RadianceRegionSelectionWindow 
 
 if os.name == 'nt':
     dirSep = '\\'
@@ -38,11 +39,11 @@ class ProcessExperimentWindow(tk.Frame):
             
             #Radiance df
             try:
-                radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=pathToRawImages,cbar_lim=cbar_lim)
+                radianceStatisticDf = fullInVivoImageProcessingPipeline_part1(sampleNameFile,save_pixel_df=True,pathToRawImages=pathToRawImages,cbar_lim=cbar_lim)
             except UnboundLocalError:
                 tk.messagebox.showinfo(title='Error', message='Automatic colorbar reading failed. Please manually enter color bar range.')
 
-            print(radianceStatisticDf)
+            # print(radianceStatisticDf)
             
             #Survival df
             #Legacy formatting
@@ -52,8 +53,19 @@ class ProcessExperimentWindow(tk.Frame):
             #Create ungrouped survival dataframe
             survivalDf = createSurvivalDf(subsetDf,[],selectedExperiment,saveDf=True)
             
+            # tk.messagebox.showinfo(title='Success', message='Part 1 of experiment processing complete!')
+
+            # new processing steps
+            processed_df, maxWidth, maxHeight = fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True)
+            print(processed_df)
             tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
-            master.switch_frame(backPage, selectedExperiment)
+
+            # open window to chose region for radiance calculation
+            master.switch_frame(RadianceRegionSelectionWindow, ProcessExperimentWindow, backPage, selectedExperiment, maxWidth, maxHeight)
+
+
+
+            # master.switch_frame(backPage, selectedExperiment)
 
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=(tk.TOP), pady=10)

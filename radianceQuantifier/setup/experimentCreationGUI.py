@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os,subprocess,pickle,math
+import pandas as pd
 import tkinter as tk
 import tkinter.ttk
 import tkinter.font as tkfont
@@ -125,6 +126,11 @@ class NewExperimentWindow(tk.Frame):
             subfolders = ['inputData','outputData','plots','misc']
             for subfolder in subfolders:
                 os.mkdir(pathName+projectName+'/'+experimentName+'/'+subfolder)
+                if subfolder == 'plots':
+                    os.mkdir(pathName+projectName+'/'+experimentName+'/'+subfolder+'/Image Processing')
+                if subfolder == 'inputData':
+                    cols = ['Day','Group','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','ExperimentName','Researcher','Date','bloodDonorID','Perturbation']
+                    pd.DataFrame(columns=cols).to_excel(pathName+projectName+'/'+experimentName+'/'+subfolder+'/sampleNameFile.xlsx',index=False)
             
             tk.messagebox.showinfo("Experiment Created", "Experiment\n"+experimentName+"\nin Project \n"+projectName+"\nhas been created.")
 

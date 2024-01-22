@@ -11,6 +11,74 @@ import tkinter as tk
 from matplotlib import transforms
 import tkinter.font as tkfont
 
+def loadPickle(path):
+  '''
+  Loads a .pkl file from path
+  '''
+  with open(path,"rb") as my_pkl:
+    data = pickle.load(my_pkl)
+
+  return data
+
+def selectMatrices(pMatrix,groups='all',days='all',samples='all'):
+    '''
+    Select image matrices from .npz files (originally from Sooraj's Radiance Quantifier)
+    '''
+    if groups != 'all':
+        groupValString = ','.join(groups)
+    else:
+        groupValString = 'all'
+    groupTitle = '-'.join(['Group',groupValString])
+    if days != 'all':
+        dayValString = ','.join(days)
+    else:
+        dayValString = 'all'
+    dayTitle = '-'.join(['Day',dayValString])
+    selectionTitle = '_'.join([groupTitle,dayTitle])
+
+    selectionDict = {}
+    allDays,allGroups,allSamples = [x.split('-')[0] for x in pMatrix.files],[x.split('-')[1] for x in pMatrix.files],[x.split('-')[2] for x in pMatrix.files]
+    if days == 'all':
+        days = pd.unique(allDays).tolist()
+    if groups == 'all':
+        groups = pd.unique(allGroups).tolist()
+    if samples == 'all':
+        samples = pd.unique(allSamples).tolist()
+    if type(days) != list:
+        days = [days]
+    if type(groups) != list:
+        groups = [groups]
+    if type(samples) != list:
+        samples = [samples]
+    selectionKeysList = []
+    for day in days:
+        for group in groups:
+            for sample in samples:
+                fullKey = '-'.join([day,group,sample])
+                if fullKey in pMatrix.files:
+                    selectionDict[fullKey] = pMatrix[fullKey]
+                    selectionKeysList.append([day,group,sample])
+                    
+    selectionKeyMI = pd.MultiIndex.from_tuples(selectionKeysList,names=['Day','Group','Sample'])
+    selectionKeyDf = pd.DataFrame(list(selectionDict.keys()),index=selectionKeyMI,columns=['Key'])    
+    
+    return selectionDict,selectionKeyDf,selectionTitle
+
+def loadNPZ(filename,groups='all',days='all',samples='all'):
+  '''
+  Loads a .npz file from path
+  '''
+  pMatrix = np.load(filename,allow_pickle=True)
+
+  selectionDict,selectionKeyDf,selectionTitle = selectMatrices(pMatrix,groups,days,samples)
+
+  return selectionDict,selectionKeyDf,selectionTitle
+
+
+
+
+
+
 def r_squared(xdata,ydata,func,popt):
     residuals = ydata- func(xdata, *popt)
     ss_res = np.sum(residuals**2)
@@ -358,3 +426,52 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     # Print New Line on Complete
     if iteration == total:
         print()
+
+
+def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
+                     header_color='#40466e', row_colors=['#f1f1f2', 'w'], edge_color='w',
+                     bbox=[0, 0, 1, 1], header_columns=0,
+                     ax=None, **kwargs):
+    '''
+    Add df to a plot
+    
+    source: https://stackoverflow.com/questions/19726663/how-to-save-the-pandas-dataframe-series-data-as-a-figure
+    '''
+    if ax is None:
+        size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
+        fig, ax = plt.subplots(figsize=size)
+        ax.axis('off')
+    mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns, **kwargs)
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set_fontsize(font_size)
+
+    for k, cell in mpl_table._cells.items():
+        cell.set_edgecolor(edge_color)
+        if k[0] == 0 or k[1] < header_columns:
+            cell.set_text_props(weight='bold', color='w', ha='center', va='center')
+            cell.set_facecolor(header_color)
+        else:
+            cell.set_facecolor(row_colors[k[0]%len(row_colors) ])
+            cell.set_text_props(ha='center', va='center')
+    return ax.get_figure(), ax
+
+def add_category_labels(df_all_rates):
+  '''
+  Add column that has all the phases for an individual mouse.
+  '''
+
+  # add category label to all data
+  df_all_rates['Categories'] = df_all_rates.reset_index().groupby('MouseID')['Phase'].transform(lambda x: ' + '.join(x.unique())).values
+
+  ## correct categories for cases when have data before CAR-T infusion ##
+  # correcting "Growth + Decay"
+  mice = df_all_rates.query('Time<0 and StartDecay==0 and Categories=="Growth + Decay"').reset_index().MouseID.unique()
+  condition = list(df_all_rates.reset_index()['MouseID'].isin(mice))
+  df_all_rates.loc[condition, ['Categories']] = 'Decay'
+
+  # correcting "Growth + Decay + Relapse"
+  mice = df_all_rates.query('Time<0 and StartDecay==0 and Categories=="Growth + Decay + Relapse"').reset_index().MouseID.unique()
+  condition = list(df_all_rates.reset_index()['MouseID'].isin(mice))
+  df_all_rates.loc[condition, ['Categories']] = 'Decay + Relapse'
+
+  return df_all_rates

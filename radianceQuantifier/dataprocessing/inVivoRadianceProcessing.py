@@ -20,16 +20,23 @@ else:
 from PIL import Image
 from scipy import ndimage
 import cv2
+import imutils
+from kneed import KneeLocator
+import statsmodels.api as sm
 
 #Clustering
 import hdbscan
 
+#Plotting
+from radianceQuantifier.plotting.plottingFunctions import slanted_images_summary_plot, plot_image_widths, plot_image, plot_slanted_image
+
 #Miscellaneous
 from itertools import tee
-from tqdm.auto import trange
+from tqdm.auto import trange, tqdm
 from scipy.signal import argrelmin,find_peaks,savgol_filter
 import warnings
 import shutil
+from radianceQuantifier.dataprocessing.miscFunctions import loadPickle, selectMatrices, loadNPZ
 
 warnings.filterwarnings("ignore")
 
@@ -664,7 +671,7 @@ def addTrueIndexToDataframe(radianceStatisticDf,sampleNameFile):
           tupleList.append(sampleNameFile.iloc[row,:].values.tolist()+[sample])
 
     fullMatrix = np.vstack(matrixList)
-    multiIndex = pd.MultiIndex.from_tuples(tupleList,names=list(sampleNameFile.columns)+['Sample']).droplevel('Group')
+    multiIndex = pd.MultiIndex.from_tuples(tupleList,names=list(sampleNameFile.columns)+['Sample'])#.droplevel('Group')
     completeDf = pd.DataFrame(fullMatrix,index=multiIndex,columns=radianceStatisticDf.columns)
     if 'SampleNames' in completeDf.index.names:
         completeDf = completeDf.droplevel('SampleNames')
@@ -927,7 +934,7 @@ def moveRawImages(sampleNameFile,pathToRawImages):
         sampleNameFile.iloc[i,dayIndex] = dayRenamingDict[oldDay]
     return sampleNameFile
 
-def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=True,save_pixel_df=False,save_images=False,pathToRawImages='',cbar_lim=[]):
+def fullInVivoImageProcessingPipeline_part1(sampleNameFile,visualize=False,save_df=True,save_pixel_df=False,save_images=False,pathToRawImages='',cbar_lim=[]):
   outputDir = 'outputData/'
   if pathToRawImages != '':
       sampleNameFile = moveRawImages(sampleNameFile,pathToRawImages)
@@ -983,3 +990,668 @@ def fullInVivoImageProcessingPipeline(sampleNameFile,visualize=False,save_df=Tru
     print('\nExiting...')
     return []
 
+def fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True):
+  # file location set up
+  outputDir = 'outputData/'
+  npz_dir = outputDir
+  minScale_dir = outputDir
+  experimentName = os.getcwd().split(dirSep)[-1]
+  
+  # additional processing
+  full_df = generate_mouseIDs(radianceStatisticDf) # label with unique mouse IDs
+  full_df = replace_background(full_df) # fix background values
+
+  processed_df, maxWidth, maxHeight = merge_images(full_df, npz_dir, minScale_dir) # merge all mice images
+
+  # save data
+  if save_df:
+    processed_df.to_pickle(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.pkl')
+    processed_df.to_excel(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.xlsx')
+
+  return processed_df, maxWidth, maxHeight
+
+
+def generate_mouseIDs(radianceStatisticDf):
+  '''
+  Adds a unique mouse ID for each individual mouse.
+  '''
+  print('Adding unique mouse ID.')
+
+  mouse_id = 0
+  mouse_df_list = []
+  # filter by experiment
+  for exp in radianceStatisticDf.reset_index().ExperimentName.unique():
+    exp_df = radianceStatisticDf.query('ExperimentName == @exp')
+    for group in exp_df.reset_index().Group.unique():
+      group_df = exp_df.query('Group == @group')
+
+      # filter by time
+      samples_list = []
+      times_list = group_df.reset_index().Time.unique()
+      for time in times_list:
+        time_df = group_df.query('Time == @time')
+        samples = time_df.reset_index().Sample
+        samples_list.append(samples)
+
+      # create dictionary of times and samples
+      samples_at_times = dict(zip(times_list,samples_list))
+
+      # samples on first day
+      samples_at_start = samples_at_times[list(samples_at_times.keys())[0]]
+
+      # mouse id generated from the mice on the first day of data for each group
+      # create dictionary mapping the "sample" to the "mouse id"
+      mouse_id_list = []
+      for first_samples in samples_at_start:
+        mouse_id = mouse_id + 1
+        mouse_id_list.append(mouse_id)
+
+      # print(list(samples_at_start))
+      # print(mouse_id_list)
+      mouse_labeling_dict = dict(zip(samples_at_start,mouse_id_list)) # dict that maps sample to mouseID
+      # print(mouse_labeling_dict)
+      for day in group_df.reset_index().Time.unique():
+        # samples on current day
+        current_samples = group_df.query('Time == @day').reset_index().Sample
+
+        # print(day)
+        # print(list(current_samples))
+        # print(mouse_labeling_dict)
+
+        # make sure don't have duplicates
+        renaming_list = []
+        if len(current_samples) == len(current_samples.unique()): # all sample names are unique
+          # print('A')
+          # print(day,current_samples.values)
+          for sample in current_samples:
+            current_mouse_id = mouse_labeling_dict[sample] # mouseID
+            renaming_list.append(current_mouse_id)  # keep list of mouseID for this group/day
+            # print('done')
+          # print(renaming_list)
+          # print('\n')
+
+        else: # have some repeating sample names
+          # print('B')
+          # print(mouse_id_list)
+          for i in range(0,len(current_samples)):
+            sample = current_samples[i]
+            current_mouse_id = mouse_id_list[i] # mouseID
+            renaming_list.append(current_mouse_id)  # keep list of mouseID for this group/day
+          # print(renaming_list)
+          # print('\n')
+      
+        mouse_df = group_df.query('Time == @day')
+        mouse_df['MouseID'] = renaming_list
+        mouse_df_list.append(mouse_df)
+
+  full_df = pd.concat(mouse_df_list).reset_index()
+
+  # confirm all mice labeled correctly
+  print('Need to correct the following mice:')
+  counter = 0
+  for mouse in full_df.reset_index().MouseID.unique():
+    mouse_df = full_df.query('MouseID == @mouse')
+    num_unique_samples = len(mouse_df.reset_index().Sample.unique())
+    if num_unique_samples != 1:
+      print(mouse)
+      counter = counter + 1
+  if counter==0:
+    print('None. All mice correctly labeled.')
+
+  return full_df
+
+def replace_background(full_df):
+  '''
+  Make background values equal to 100
+  '''
+  # replace zero values and those below minimum detection per pixel of 100
+  full_df['Average Radiance'] = full_df['Average Radiance'].apply(lambda x: 100 if x < 100 else x)
+
+  return full_df
+
+def get_npz_minScale_info(merged_data, npz_dir, minScale_dir):
+  '''
+  Function that generates dataframes with experiment and scale info for each image.
+
+  Input:
+  merged_data -- dataframe of merged .pkl files with mouse IDs (output of generate_mouseIDs() function)
+  npz_dir -- path to the .npz files to merge
+  minScale_dir -- path to the minScale.pkl files to merge
+
+  Output:
+  expList_npz -- list of experiment names
+  labelDf_npz -- dataframe with experiment for each image
+  labelDf_minScale -- dataframe with min and max scale for each image
+  matrixList -- list of each image matrix
+  '''
+  # get the npz pixel file names
+  filenameList_npz = sorted([x for x in os.listdir(npz_dir) if x.endswith('pixel.npz')])  # only keep the -pixel.npz files
+  expList_npz = [f_npz.split('-')[1] for f_npz in filenameList_npz] # list of experiments
+
+  # get the minScale file names
+  filenameList_minScale = sorted([x for x in os.listdir(minScale_dir) if x.endswith('minScale.pkl')])  # only keep the -minScale.pkl files
+  expList_minScale = [f_minScale.split('-')[1] for f_minScale in filenameList_minScale] # list of experiments
+
+  # check that have same experiments
+  if set(expList_npz) == set(expList_minScale): expList = expList_npz
+  else: raise Exception('Error: Experiments for .npz and minScale.pkl files are not the same.')
+
+  # load in each experiment
+  labelListofLists_npz = []  # list of labels for each npz matrix
+  matrixListofLists = []  # list that has each individual 3D matrix
+  labelListofLists_minScale = []  # list of labels for each minScale file
+  vminListofLists = []  # list of vmin values for each minScale file
+  vmaxListofLists = []  # list of vmax values for each minScale file
+
+  for file_npz, file_minScale in tqdm(zip(filenameList_npz, filenameList_minScale), total=len(filenameList_npz)):
+    exp_npz = file_npz.split('-')[1]  # npz experiment name
+    exp_minScale = file_minScale.split('-')[1]  # minScale experiment name
+    try:
+      if (exp_npz == exp_minScale) == True:  # make sure the experiment names are the same (in the same order)
+        exp_name = exp_npz  # same as exp_minScale
+        if exp_name in merged_data.reset_index().ExperimentName.unique():  # only merge files with data in original master dataframe
+          # load in each npz experiment file
+          selectionDict, selectionKeyDf, selectionTitle = loadNPZ(f'{npz_dir}/{file_npz}', groups='all', days='all', samples='all')
+          labelListofLists_npz.append([f'{exp_name}-{x}' for x in list(selectionDict.keys())])  # append list of matrix labels (eg MP4-D3-A-1 (Experiment-Day-Group-Sample)) for that experiment
+          matrixListofLists.append(list(selectionDict.values()))  # append list of matrices for that experiment
+          
+          # load in each minScale experiment file
+          scaleDict = loadPickle(f'{minScale_dir}/{file_minScale}')  # dictionary with min/max scale for each image
+          labelListofLists_minScale.append([f'{exp_name}-{x}' for x in list(scaleDict.keys())])  # append list of labels (eg MP4-D3-A-1 (Experiment-Day-Group-Sample)) for that experiment
+          vminListofLists.append([sublist[0] for sublist in list(scaleDict.values())])
+          vmaxListofLists.append([sublist[1] for sublist in list(scaleDict.values())])
+        
+      else:
+        raise Exception
+    except:
+      print(f'Experiments not aligned: {exp_npz} {exp_minScale}')
+
+  # indices for labelList_npz will match indices of matrixList
+  labelList_npz = [label_npz for labelExpList_npz in labelListofLists_npz for label_npz in labelExpList_npz]  # list of each matrix label (flatten list of lists)
+  matrixList = [matrix for matrixExpList in matrixListofLists for matrix in matrixExpList]  # list of each matrix (flatten list of lists)
+
+  # indices for labelList_minScale will match indices of vminList and vmaxList
+  labelList_minScale = [label_minScale for labelExpList_minScale in labelListofLists_minScale for label_minScale in labelExpList_minScale]  # list of each minScale label (flatten list of lists)
+  vminList = [vmin for vminExpList in vminListofLists for vmin in vminExpList]  # list of each vmin (flatten list of lists)
+  vmaxList = [vmax for vmaxExpList in vmaxListofLists for vmax in vmaxExpList]  # list of each vmax (flatten list of lists)
+
+  # convert labelList_npz to dataframe
+  exp_list = []
+  day_list = []
+  group_list = []
+  mouse_list = []
+  for label in labelList_npz:
+    exp_list.append(label.split('-')[0])
+    day_list.append(label.split('-')[1])
+    group_list.append(label.split('-')[2])
+    mouse_list.append(label.split('-')[3])
+
+  labelDf_npz = pd.DataFrame(
+      {'Experiment': exp_list,
+       'Day': day_list,
+       'Group': group_list,
+       'Mouse': mouse_list
+       })
+
+  labelDf_npz['Index'] = labelDf_npz.index.values
+  labelDf_npz = labelDf_npz.set_index(['Experiment', 'Day', 'Group', 'Mouse'])
+
+  # convert labelList_minScale to dataframe
+  exp_list = []
+  day_list = []
+  group_list = []
+  mouse_list = []
+  for label in labelList_minScale:
+    exp_list.append(label.split('-')[0])
+    day_list.append(label.split('-')[1])
+    group_list.append(label.split('-')[2])
+    mouse_list.append(label.split('-')[3])
+
+  labelDf_minScale = pd.DataFrame(
+      {'Experiment': exp_list,
+       'Day': day_list,
+       'Group': group_list,
+       'Mouse': mouse_list,
+       'vmin': vminList,
+       'vmax': vmaxList,
+       })
+
+  labelDf_minScale = labelDf_minScale.set_index(['Experiment', 'Day', 'Group', 'Mouse'])
+
+  return expList_npz, labelDf_npz, labelDf_minScale, matrixList
+
+def add_metadata_to_images(expList_npz, merged_data, labelDf_newtime):
+  '''
+  Adds additional information about experiment to each image.
+  '''
+  good_exp_list = list(merged_data.reset_index().ExperimentName.unique())
+
+  col_names = ['Group','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation']
+  drop_cols = ['Average Pixel Intensity','Average Radiance','Total Radiance','Tumor Fraction','Day','Time','Date','ExperimentName','Researcher']
+  fullExpDf_list=[]
+  # print(expList_npz,good_exp_list)
+  for exp_name in expList_npz: # expList_npz same as expList_minScale
+      if exp_name in merged_data.reset_index().ExperimentName.unique(): # only merge files with data in original master dataframe
+          if exp_name in good_exp_list:
+              try:
+                  # get metadata for each group
+                  exp_df_raw = merged_data.query('ExperimentName == @exp_name')
+                  exp_df = exp_df_raw.reset_index().set_index(col_names).drop(drop_cols,axis=1).drop_duplicates()
+                  group_data_list = list(exp_df.index.unique())
+
+                  labelDf_exp = labelDf_newtime.query('Experiment == @exp_name')
+                  idx=list(labelDf_newtime.index.names)
+
+                  # get group names
+                  group_names = labelDf_exp.reset_index().Group.unique()
+
+                  # print(exp_name,len(group_data_list),len(group_names),exp_df_raw.shape[0],labelDf_exp.shape[0])
+                  # print(group_names)
+
+                  # add metadata to labelDf
+                  group_df_list=[]
+                  for i,group_name in enumerate(group_names): # for each group name
+                      # group_df = labelDf.query('Experiment == @exp_name and Group == @group_name') # df for each group in each experiment
+                      group_df = labelDf_exp.query('Group == @group_name') # df for each group in each experiment
+                      # print(i,group_name,group_df.shape[0])
+                      # combine/renumber groups to match order of corresponding data in group_data_list
+
+                      #print(col_names)
+                      for j,col in enumerate(col_names): # for each metadata type
+                          # print(group_name,i,group_data_list[i])
+                          if col != 'Group':
+                            group_df[col] = group_data_list[i][j] # add new column (j) with metadata for corresponding group (i)
+                      group_df_list.append(group_df)
+                  labelExpDf = pd.concat(group_df_list) # combine the group dfs with the new metadata
+
+                  ##### DEBUGGING ONLY #######
+                  # labelExpDf.to_pickle(f'/Users/kenetal/Desktop/labelExpDf.pkl')
+                  # exp_df_raw.to_pickle(f'/Users/kenetal/Desktop/exp_df_raw.pkl')
+                  ##### DEBUGGING ONLY #######
+
+                  # sort before merging
+                  labelExpDf.sort_values(by=['Day','Mouse','Tumor','TCellNumber','Perturbation'],axis=0, inplace=True)
+                  exp_df_raw.sort_values(by=['Day','Sample','Tumor','TCellNumber','Perturbation'],axis=0, inplace=True)
+
+                  # add new metadata to old info
+                  if (np.sum(labelExpDf.reset_index().Mouse != exp_df_raw.reset_index().Sample) + 
+                      np.sum(labelExpDf.reset_index().Day != exp_df_raw.reset_index().Day) +
+                      np.sum(labelExpDf.reset_index().CAR_Binding != exp_df_raw.reset_index().CAR_Binding) +
+                      np.sum(labelExpDf.reset_index().CAR_Costimulatory != exp_df_raw.reset_index().CAR_Costimulatory) +
+                      np.sum(labelExpDf.reset_index().Tumor != exp_df_raw.reset_index().Tumor) +
+                      np.sum(labelExpDf.reset_index().TumorCellNumber != exp_df_raw.reset_index().TumorCellNumber) + 
+                      np.sum(labelExpDf.reset_index().TCellNumber != exp_df_raw.reset_index().TCellNumber) + 
+                      np.sum(labelExpDf.reset_index().bloodDonorID != exp_df_raw.reset_index().bloodDonorID) + 
+                      np.sum(labelExpDf.reset_index().Perturbation != exp_df_raw.reset_index().Perturbation)
+                    ) == 0: # double check that correctly lined up for merging
+                      fullExpDf = pd.concat([labelExpDf.reset_index().rename(columns={'Index':'ImageID'}).drop(['Experiment','Mouse'],axis=1), # new
+                                            exp_df_raw.reset_index().drop(['Group','CAR_Binding','CAR_Costimulatory', 'Tumor', 'TumorCellNumber', 'TCellNumber','bloodDonorID', 'Perturbation', 'Day'],axis=1)], # old
+                                            axis=1)#.set_index(col_names)                                
+                      fullExpDf_list.append(fullExpDf)
+                  else:
+                      print('ERROR: INFO FROM LABELDF DOES NOT MATCH WITH INFO FROM ORIGINAL MATRIX DATA')
+                      raise Exception('ERROR: INFO FROM LABELDF DOES NOT MATCH WITH INFO FROM ORIGINAL MATRIX DATA')
+              
+              except:
+                  print(exp_name)
+
+  labelDf_all = pd.concat(fullExpDf_list).set_index(['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','Group','Day','Time','Sample','MouseID','ImageID']).drop(['index'],axis=1,errors='ignore') # sometimes "index" appears as column -- drop it
+
+  return labelDf_all
+
+def crop_tail(matrix):
+    '''
+    Crops mouse tail from one image.
+    Returns all dimensions of image matrix (radiance,mousePixel,brightfield)
+    '''
+    ## knee crop tail method ##
+    # use brightfield, not mousePixel
+    brightfield_df = pd.DataFrame(matrix[:,:,2])
+    # brightfield_df = np.log10(brightfield_df)
+    # brightfield_df = brightfield_df/max(brightfield_df.max())
+    columnBrightfield = (brightfield_df.sum(axis=1)).to_frame('Value') # percent of pixels in row that are mousePixels
+    maxVal = np.max(columnBrightfield).values[0] # find maximum value of brightfield
+    maxIndex = np.argmax(columnBrightfield) # find row where maximum occurs
+
+    # only look at x-vals after max and y-vals below threshold (i.e. bottom right quadrant)
+    threshold = 0.8*maxVal
+    try:
+        start_idx = np.where((columnBrightfield[columnBrightfield.index > maxIndex] < threshold).Value.values)[0][0]+maxIndex
+        # y-values of pixels within range
+        pixels2search_vals = columnBrightfield[columnBrightfield.index > start_idx].Value.values
+        # smooth the curve using Savitzky-Golay filter
+        smoothed_pixels2search_vals = savgol_filter(pixels2search_vals, window_length=51, polyorder=2)
+        # x-values (idx) of pixels within range
+        pixels2search_idx = np.arange(len(pixels2search_vals)) + start_idx
+        # knee finder method
+        kl = KneeLocator(pixels2search_idx,smoothed_pixels2search_vals, curve='convex', direction='decreasing')
+        # kl.plot_knee()
+        knee_crop_idx = kl.knee # index to crop at
+        matrix_tailcrop = matrix[:knee_crop_idx,:,:] # crop tail
+    except: # no tail to crop
+        matrix_tailcrop = matrix
+        knee_crop_idx=np.nan
+  
+    # if matrix_tailcrop.shape[0] > 345: # should only be 2643 and 2645 which are messed up and will get fixed/ignored
+    #     matrix_tailcrop = matrix_tailcrop[:345,:,:]
+    #     print('Cropping at max height 345')
+  
+    return matrix_tailcrop
+
+def padMatrix(oldMatrix,maxLength,maxWidth,paddingConstant,i):
+  '''
+  Adds padding to matrix. (0,0) is the top left.
+  New matrix will have padding on all sides, if needed.
+  If uneven padding, will add fewer to top and left. Bottom and right will have more padding.
+
+  Inputs:
+  oldMatrix -- m x n x i -- matrix to pad
+  maxLength -- M         -- length of padded matrix
+  maxWidth  -- N         -- width of padded matrix
+  paddingConstant -- 1 x i -- values to use for padding in each dimension
+  i -- dimension to pad 
+
+  Output:
+  newMatrix -- M x N x i -- padded matrix
+
+
+  Ex:
+
+  oldMatrix:
+             array([[1., 1.],
+                    [1., 1.],
+                    [1., 1.],
+                    [1., 1.],
+                    [1., 1.]])
+
+
+  pad with zeros to be size 8 x 5
+
+
+  newMatrix:
+             array([[0., 0., 0., 0., 0.],
+                    [0., 1., 1., 0., 0.],
+                    [0., 1., 1., 0., 0.],
+                    [0., 1., 1., 0., 0.],
+                    [0., 1., 1., 0., 0.],
+                    [0., 1., 1., 0., 0.],
+                    [0., 0., 0., 0., 0.],
+                    [0., 0., 0., 0., 0.]])
+
+  '''
+  # create matrix of correct max dimensions with default pad values
+  newMatrix = np.multiply(np.ones([maxLength,maxWidth]),paddingConstant)
+
+  # get padding dimension values
+  y_padding = (maxLength-oldMatrix.shape[0])/2
+  start_y = int(np.floor(y_padding))
+  end_y = int(maxLength-np.ceil(y_padding))
+
+  x_padding = (maxWidth-oldMatrix.shape[1])/2
+  start_x = int(np.floor(x_padding))
+  end_x = int(maxWidth-np.ceil(x_padding))
+
+  # add original values to correct location
+  newMatrix[start_y:end_y,start_x:end_x] = oldMatrix[:,:,i]
+
+  return newMatrix
+
+def pad_images(matrix_rescaled_list,maxHeight,maxWidth):
+  '''
+  Pad each image (in all three dimensions) to be the same width (maxWidth).
+  
+  Inputs:
+  matrix_rescaled_list -- list of image matrices to be rescaled
+  maxHeight -- max height of all images
+  maxWidth -- max width of all images
+  
+  Output:
+  bigMatrix -- matrix of all images merged together after padding
+  '''
+
+  newMatrixList = []
+  for matrix in tqdm(matrix_rescaled_list): # for each rescaled matrix
+      dstackList = []
+      for i,paddingConstant in enumerate([-999,0,np.min(matrix[:,:,2])]): # radiance,mousePixels,brightfield
+          # padding function (shouldn't have any padding on height since already scaled to maxHeight)    
+          newMatrix = padMatrix(matrix,maxHeight,maxWidth,paddingConstant,i) 
+  #        # newMatrix = newMatrix[:,50:220] # crop extra space
+          dstackList.append(newMatrix) # add each of i dimensions to list
+      newMatrixList.append(np.dstack(dstackList)) # combine matrices along ith dimension and add to list
+  print('Stacking Images (Warning: This step may take a few minutes.)')
+  bigMatrix = np.stack(newMatrixList,axis=3) # combine each padded matrix (add 4th dimension -- (length,height,3layers,stack))
+
+  return bigMatrix
+
+def merge_images(merged_data, npz_dir, minScale_dir):
+    '''
+    Merge each individual mouse image (.npz files)
+    '''
+    print('Merging Images.')
+
+    # get experiment and scale info for each image
+    print('Getting information for each image')
+    expList_npz, labelDf_npz, labelDf_minScale, matrixList = get_npz_minScale_info(merged_data, npz_dir, minScale_dir)
+
+    # combine the data so that the vmin,vmax info matches each image index value
+    labelDf_merged = labelDf_npz.copy()
+    labelDf_merged.loc[:,labelDf_minScale.columns] = labelDf_minScale
+
+    # which experiments have NaNs (missing info for min/max)
+    print('Need to fix NaNs in:')
+    print(labelDf_merged[labelDf_merged['vmin'].isna()].reset_index().Experiment.unique())
+    
+    # # rescale time to be zero on day of CAR administration
+    # labelDf_newtime = prf.rescale_time(labelDf_merged)
+
+    # add additional information about each experiment to dataframe
+    print('Adding additional metatdata')
+    labelDf_all = add_metadata_to_images(expList_npz, merged_data, labelDf_merged)
+    labelDf_all.to_hdf(f'outputData/labelDf_all-{os.getcwd().split(dirSep)[-1]}.hdf',key='df',mode='w')
+    print('Dataframe with metadata saved.')
+    
+    # tail cropping
+    print('Performing tail cropping')
+    matrix_tailCrop_list = [crop_tail(x) for x in tqdm(matrixList)] # crop tails from each image in matrixList
+
+    # rescale images
+    print('Rescaling images to same height')
+    maxHeight = max([x.shape[0] for i,x in enumerate(matrix_tailCrop_list)]) # 345 -- get max height to rescale all images to
+    matrix_rescaled_list = [imutils.resize(x, height=maxHeight, inter=cv2.INTER_LINEAR) for x in tqdm(matrix_tailCrop_list)] # rescale each image to maxHeight while keeping aspect ratio the same
+
+    # find slanted mice
+    print('Finding slanted images')
+    # get slope/angle of each mouse
+    thresh=7 # degrees ## TODO -- make this part of GUI
+    angle_list = []
+    for i,matrix in tqdm(enumerate(matrix_tailCrop_list),total=len(matrix_tailCrop_list)):
+        # OLS regression on mouse coordinates -- flip mouse to make work better
+        y = np.where(matrix==1)[1]
+        x_noconst = np.where(matrix==1)[0]
+        x = sm.add_constant(x_noconst)
+        model = sm.OLS(y,x)
+        results = model.fit()
+        b, m = results.params
+        angle = np.abs(np.degrees(np.arctan(m))) # convert slope to angle in degrees
+        angle_list.append(angle) # keep track of angles
+        if angle > thresh: # more than thresh degrees slanted
+            plot_slanted_image(matrix,i,b,m,plot_dir=f'plots/Image Processing/Slanted Images')
+    
+    # make into a dataframe
+    angle_df = pd.DataFrame(angle_list,columns=['Angle'])
+    angle_df.index.name = 'ImageID'
+    
+    # kde and rug plot of slanted images
+    slanted_images_summary_plot(angle_df, thresh, plot_dir=f'plots/Image Processing')
+
+    # images with angle > thresh
+    slanted_imageIDs = angle_df[angle_df['Angle']>thresh].index.to_list()
+
+    # determine max width to pad all images
+    plot_image_widths(matrixList, matrix_rescaled_list, plot_dir=f'plots/Image Processing')
+
+    # quality control -- which images are too wide (most likely due to incorrect cropping)
+    # make sure images actually rescaled to same height
+    for idx,matrix in enumerate(matrix_rescaled_list):
+        if matrix.shape[0]!=maxHeight:
+            print('Incorrect height scaling: ',idx,matrix.shape[0])
+    
+    # find abnormally wide images
+    abnormal_imageIDs = []
+    for idx,matrix in enumerate(matrix_rescaled_list):
+        width_thresh = 203 ### TODO make this part of GUI
+        if matrix.shape[1] > width_thresh: # largest correctly scaled/cropped image is 203
+            abnormal_imageIDs.append(idx)
+            print('Image too wide: ', idx,matrix.shape[1])
+            plot_image(matrix,idx, 'brightfield', plot_dir=f'plots/Image Processing/Wide Images')
+
+    # images to ignore -- slanted or too wide
+    imagesIDs2ignore = slanted_imageIDs + abnormal_imageIDs
+    
+    # save bad image IDs
+    badIDs_file = open(f'misc/imagesIDs2ignore-{os.getcwd().split(dirSep)[-1]}.pkl', 'wb') 
+    pickle.dump(imagesIDs2ignore,badIDs_file)
+    badIDs_file.close()
+    np.savetxt(f'misc/imagesIDs2ignore-{os.getcwd().split(dirSep)[-1]}.txt',imagesIDs2ignore,fmt='%d',delimiter=',')
+    
+    # get max width across all scaled images
+    print('Padding images to same width')
+    maxWidth = max([x.shape[1] for i,x in enumerate(matrix_rescaled_list) if i not in imagesIDs2ignore])
+    
+    print(f'Max Width: {maxWidth}; Max Height: {maxHeight}')
+    # create new matrix_rescaled_list correcting for slanted/wide images
+    # crop slanted/abnormal images that are greater than maxWidth
+    # add matrix of np.nan if "bad" matrix (slanted/error)
+    matrix_rescaled_list = [x[:,:maxWidth,:] if i not in imagesIDs2ignore else np.full([maxHeight,maxWidth,3], np.nan) for i,x in enumerate(matrix_rescaled_list)]
+
+    # perform padding of each image and merge all together
+    bigMatrix = pad_images(matrix_rescaled_list,maxHeight,maxWidth)
+    np.save(f'outputData/bigMatrix-{os.getcwd().split(dirSep)[-1]}.npy',bigMatrix)
+    print('All Images Processed, Merged, and Saved (bigMatrix.npy).')
+
+    # generate average mouse across all timepoints
+    # plot average image
+    dataTypeDict = {'radiance':0,'mousePixel':1,'brightfield':2}
+    plt.figure() # make new figure
+    avgRadianceMatrix = np.nanmean(bigMatrix[:,:,dataTypeDict['radiance'],:],axis=2) # average radiance matrix
+    vmin = min(labelDf_all.vmin.values) # get vmin
+    vmax = max(labelDf_all.vmax.values) # and vmax
+    background = np.nanmean(bigMatrix[:,:,dataTypeDict['brightfield'],:],axis=2) # use brightfield as backgroud of plot
+    plt.imshow(background,cmap='Greys_r') # plot brightfield as background first
+    mouseMask = np.nanmean(bigMatrix[:,:,dataTypeDict['mousePixel'],:],axis=2)>0 # true/false for each pixel - true if on mouse (>0 means have tumor at that pixel for at least one mouse)
+    background[mouseMask] = avgRadianceMatrix[mouseMask] # replace pixels on mouse with radiance values              
+    background[~mouseMask] = -999 # make background pixels not on mouse black (ignored by colormap)
+    plt.imshow(background,cmap='turbo') # ,norm=matplotlib.colors.LogNorm(vmin,vmax) # normalize color only for radiance
+    plt.savefig(f'plots/Image Processing/avg_merged_image-{os.getcwd().split(dirSep)[-1]}.pdf',format='pdf',bbox_inches='tight')
+    plt.axis('off')
+    plt.savefig(f'plots/Image Processing/avg_merged_image-{os.getcwd().split(dirSep)[-1]}.png',format='png',bbox_inches='tight',pad_inches=0) # need png to display in window
+    print('Average image saved.')
+
+    return labelDf_all.set_index(['vmin','vmax'],append=True), maxWidth, maxHeight
+
+def calculate_radiance_from_merged_images(matrix,labelDf,imagesIDs2ignore,image_dir):
+  '''
+  Function to calculate the radiance from the rescalled/merged images.
+  '''
+
+  img_list = list(labelDf.ImageID.values) # imageIDs
+  img_list = [idx for idx in img_list if idx not in imagesIDs2ignore] # remove bad images
+
+  # create dataframe with average value on each day for selected region and selected mice
+  avg_vals = []
+  tot_vals = []
+  for img in tqdm(img_list): # loop through each image
+    # extract image from big matrix
+    img_matrices = matrix[:,:,:,img]
+    img_radiance = img_matrices[:,:,0]
+    img_mousePixel = img_matrices[:,:,1]
+    # img_brightfield = img_matrices[:,:,2] # not used here
+    
+    # only calculate radiance for pixels that are on the mouse as determined from the mousePixel info
+    zeros = np.zeros(img_radiance.shape) # matrix of zeros -- will add radiance values on mouse ontop of this
+    mouseMask = img_mousePixel == 1 # true/false for each pixel - true if on mouse
+    zeros[mouseMask] = img_radiance[mouseMask] # replace pixels on mouse with radiance values
+
+    # save the region/image where calculating radiance
+    plt.figure()
+    plt.imshow(zeros,cmap='turbo') # ,norm=matplotlib.colors.LogNorm(vmin,vmax) # normalize color only for radiance
+    plt.axis('off')
+    plt.savefig(f'{image_dir}/{img}_ROI.pdf')
+    
+    # calculate total and average radiance of image (ignore -999 which is from padding)
+    tot_vals.append(np.nansum([val for val in zeros.flatten() if val != -999])) # total vals in region
+    avg_vals.append(np.nanmean([val for val in zeros.flatten() if val != -999])) # average vals in region
+
+  # put values into a dataframe
+  avgValsDf = pd.DataFrame(avg_vals,index=img_list,columns=[f'avg_radiance']).rename_axis('ImageID')
+  totValsDf = pd.DataFrame(tot_vals,index=img_list,columns=[f'tot_radiance']).rename_axis('ImageID')
+
+  # add metadata information
+  print('Adding metadata')
+  mice = list(labelDf.reset_index().MouseID.unique()) # list of mice where have images
+  dfList = []
+  for mouse in tqdm(mice):
+    # filter df to have radiance for one mouse at a time
+    images = list(labelDf.query('MouseID == @mouse').reset_index().ImageID.unique()) # imageIDs for mouse
+    avg = avgValsDf.query('ImageID in @images')
+    tot = totValsDf.query('ImageID in @images')
+    
+    # create new dataframe with info on mice
+    df = avg.copy().drop(['avg_radiance'],axis=1)
+    df['MouseID']=mouse
+    df['Average Radiance']=avg.values
+    df['Total Radiance']=tot.values
+    df['Date']=labelDf.query('MouseID == @mouse').reset_index().Date.unique()[0]
+    df['ExperimentName']=labelDf.query('MouseID == @mouse').reset_index().ExperimentName.unique()[0]
+    df['Researcher']=labelDf.query('MouseID == @mouse').reset_index().Researcher.unique()[0]
+    df['CAR_Binding']=labelDf.query('MouseID == @mouse').reset_index().CAR_Binding.unique()[0]
+    df['CAR_Costimulatory']=labelDf.query('MouseID == @mouse').reset_index().CAR_Costimulatory.unique()[0]
+    df['Tumor']=labelDf.query('MouseID == @mouse').reset_index().Tumor.unique()[0] 
+    df['TumorCellNumber']=labelDf.query('MouseID == @mouse').reset_index().TumorCellNumber.unique()[0]
+    df['TCellNumber']=labelDf.query('MouseID == @mouse').reset_index().TCellNumber.unique()[0]
+    df['bloodDonorID']=labelDf.query('MouseID == @mouse').reset_index().bloodDonorID.unique()[0]
+    df['Perturbation']=labelDf.query('MouseID == @mouse').reset_index().Perturbation.unique()[0]
+    df['Group']=labelDf.query('MouseID == @mouse').reset_index().Group.unique()[0]
+    df['Sample']=labelDf.query('MouseID == @mouse').reset_index().Sample.unique()[0]
+    df['Time'] = [labelDf.query('ImageID == @imgID').reset_index().Time[0] for imgID in list(labelDf.query('MouseID == @mouse and ImageID not in @imagesIDs2ignore').ImageID.values)]
+    df['Day'] = [f'D{x}' for x in list(df.reset_index().Time)]
+
+    # sort df by time
+    df = df.sort_values(by=['Time'])
+
+    dfList.append(df)
+
+  df_from_images = pd.concat(dfList).reset_index().set_index(['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','Group','Day','Time','Sample','MouseID'])
+
+  # replace zero values and those below minimum detection per pixel of 100
+  df_from_images = replace_background(df_from_images) # fix background values
+
+  return df_from_images
+
+
+def calculate_radiance(left,right,top,bottom,text):
+    '''
+    Function to calculate the radiance from the rescalled/merged images.
+    Inputs:
+        left, right, top, bottom -- coordinates of rectangle to calculate radiance
+        text -- string for selected region
+    '''
+    print(f'Calculating Radiance ({text}): left={left}, top={top}, right={right}, bottom={bottom}.')
+    # reload in the data
+    matrix = np.load(f'outputData/bigMatrix-{os.getcwd().split(dirSep)[-1]}.npy') # reload the raw image data
+    labelDf_all = pd.read_hdf(f'outputData/labelDf_all-{os.getcwd().split(dirSep)[-1]}.hdf') # reload data that now has metadata for each image
+    labelDf = labelDf_all.drop(['Average Pixel Intensity','Average Radiance','Total Radiance','Tumor Fraction'],axis=1).reset_index(['ImageID']) # only want the metadata
+    imagesIDs2ignore = loadPickle(f'misc/imagesIDs2ignore-{os.getcwd().split(dirSep)[-1]}.pkl')
+
+    # crop matrix depending on input parameter region
+    matrixRegion = matrix[top:bottom,left:right,:,:]
+
+    # calculate radiance for each image
+    image_dir = f'plots/Image Processing/ROI Radiance Calculation/left{left}_top{top}_right{right}_bottom{bottom}_{text}'
+    if not os.path.exists(image_dir): os.makedirs(image_dir) # make dir to save figures if it doesn't already exist
+    df_from_images = calculate_radiance_from_merged_images(matrixRegion,labelDf,imagesIDs2ignore,image_dir)
+
+    data_dir = 'outputData/ROI Radiance Calculation'
+    if not os.path.exists(f'{data_dir}/left{left}_top{top}_right{right}_bottom{bottom}_{text}'): os.makedirs(f'{data_dir}/left{left}_top{top}_right{right}_bottom{bottom}_{text}') # make dir to save merged radiance data if it doesn't already exist
+    df_from_images.to_pickle(f'{data_dir}/left{left}_top{top}_right{right}_bottom{bottom}_{text}/{os.getcwd().split(dirSep)[-1]}_df_from_images_left{left}_top{top}_right{right}_bottom{bottom}_{text}.pkl')
+    print(f'Dataframe with calculated radiance ({text}: left={left}, top={top}, right={right}, bottom={bottom}) saved.')

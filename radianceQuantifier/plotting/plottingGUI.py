@@ -5,8 +5,9 @@ import pandas as pd
 import tkinter as tk
 import tkinter.ttk
 from radianceQuantifier.dataprocessing.inVivoRadianceImagePlotting import selectMatrices,plotMouseImages
-from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf,createSurvivalPlot 
-import radianceQuantifier.dataprocessing.miscFunctions as mf
+from radianceQuantifier.dataprocessing.survivalProcessing import createSurvivalDf,createSurvivalPlot
+from radianceQuantifier.plotting.plottingFunctions import plot_individual_summary_sheet
+from radianceQuantifier.dataprocessing.miscFunctions import loadPickle, loadNPZ
 import radianceQuantifier.plotting.facetPlotLibrary as fpl 
 import radianceQuantifier.plotting.interactiveGUIElements as ipe
 import matplotlib.colors as mcolors
@@ -82,14 +83,16 @@ class PlotExperimentWindow(tk.Frame):
         
         l2 = tk.Label(mainWindow, text="""Datatype: """)
         v2 = tk.StringVar(value='radiance')
-        rb2a = tk.Radiobutton(mainWindow, text="Radiance",padx = 20, variable=v2, value='radiance')
+        rb2a = tk.Radiobutton(mainWindow,text="Radiance",padx = 20, variable=v2, value='radiance')
         rb2b = tk.Radiobutton(mainWindow,text="Mouse Images",padx = 20, variable=v2, value='mouseImages')
         rb2c = tk.Radiobutton(mainWindow,text="Survival",padx = 20, variable=v2, value='survival')
+        rb2d = tk.Radiobutton(mainWindow,text="Summary Sheet (one per mouse)",padx = 20, variable=v2, value='summary')
         
         l2.grid(row=0,column=0)
         rb2a.grid(row=1,column=0,sticky=tk.W)
         rb2b.grid(row=2,column=0,sticky=tk.W)
         rb2c.grid(row=3,column=0,sticky=tk.W)
+        rb2d.grid(row=4,column=0,sticky=tk.W)
         
         def collectInputs():
             global useModifiedDf
@@ -136,11 +139,23 @@ class PlotExperimentWindow(tk.Frame):
                 pixelMatrix = np.load('outputData/'+folderName+'-pixel.npz')
                 minScaleDict = pickle.load(open('outputData/'+folderName+'-minScale.pkl','rb'))
                 master.switch_frame(MouseImageSelectionPage)
-            #Survival
-            else:
+            elif dataType == 'survival':
                 global radianceStatisticDf
                 radianceStatisticDf = pd.read_pickle('outputData/radianceStatisticPickleFile-'+folderName+'.pkl')
                 master.switch_frame(SurvivalGroupSelectionPage)
+            elif dataType == 'summary':
+                exp_date_name = os.getcwd().split(dirSep)[-1]
+                region_long = [item for item in os.listdir('outputData/ROI Radiance Calculation') if (item.startswith('left') and item.endswith('all'))][0]
+
+                df_all_rates = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/BayesianPriors/{exp_date_name}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl')
+                labelDf = pd.read_hdf(f'outputData/labelDf_all-{exp_date_name}.hdf') # reload data that now has metadata for each image
+                matrix = np.load(f'outputData/bigMatrix-{exp_date_name}.npy') # reload the raw image data
+
+                plot_dir = 'plots/Summary Sheets'
+
+                plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir)
+                tk.messagebox.showinfo(title='Success', message='Summary sheet successfully created for each mouse.')
+
 
         buttonWindow = tk.Frame(self)
         buttonWindow.pack(side=tk.TOP,pady=10)
