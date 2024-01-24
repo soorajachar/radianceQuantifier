@@ -589,7 +589,7 @@ def plot_all_data(data,ax,
       # set y ticks
       y_major = matplotlib.ticker.LogLocator(base = 10.0, numticks = 8)
       g.yaxis.set_major_locator(y_major)
-      g.set_yticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+      g.set_yticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8],labels=[r'$10^{0}$','',r'$10^{2}$','',r'$10^{4}$','',r'$10^{6}$','',r'$10^{8}$'])
       y_minor = matplotlib.ticker.LogLocator(base = 10.0, subs = np.arange(1.0, 10.0) * 0.1, numticks = 10)
       g.yaxis.set_minor_locator(y_minor)
       g.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
@@ -887,8 +887,8 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       g=sns.lineplot(data=df_all_regions.reset_index(),x='Time',y='Average Radiance',marker='o',hue='Region',legend=True,ax=axs3);
       g.set_yscale('log')
       g.set_ylim(1,1e8)
-      g.set_xlabel('Days Since CAR-T Cell Administration')
-      g.set_ylabel('Average Radiance per Pixel\n(p/sec/cm$^2$/sr/pixel)');
+      g.set_xlabel('Days Since CAR-T Cell Administration',fontsize=30)
+      g.set_ylabel('Average Radiance per Pixel\n(p/sec/cm$^2$/sr/pixel)',fontsize=30);
       # g.set_xticks(np.arange(0,df.index[-1]+5,5), labels=np.arange(0,df.index[-1]+5,5));
       g.set_xlim(-1, np.max(df_all_regions.reset_index().Time)+1)
       sns.move_legend(g, loc='upper right', bbox_to_anchor=(1, -0.35))
@@ -897,6 +897,15 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       g.axhspan(1e7,1e8,facecolor='#d9dbde',zorder=-1000) # upper limit is 1e7
       # g.text((np.max(df_all_regions.reset_index().Time)-np.min(df.reset_index().Time)-8)/2 , 7,'Below Detection Threshold')
       # g.text((np.max(df_all_regions.reset_index().Time)-np.min(df.reset_index().Time)-8)/2, 2.5e7,'Above Detection Threshold')
+
+      # set y ticks
+      y_major = matplotlib.ticker.LogLocator(base = 10.0, numticks = 8)
+      g.yaxis.set_major_locator(y_major)
+      g.set_yticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8],labels=[r'$10^{0}$','',r'$10^{2}$','',r'$10^{4}$','',r'$10^{6}$','',r'$10^{8}$'])
+      y_minor = matplotlib.ticker.LogLocator(base = 10.0, subs = np.arange(1.0, 10.0) * 0.1, numticks = 10)
+      g.yaxis.set_minor_locator(y_minor)
+      g.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+      axs3.tick_params(axis='both', which='both', labelsize=30)
 
       
       ### axs4 - parameter summary table ###
@@ -954,7 +963,8 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
           exp = mouse_info.reset_index().ExperimentName.unique()[0]
           group = mouse_info.reset_index().Group.unique()[0]
           sample = mouse_info.reset_index().Sample.unique()[0]
-          plt.suptitle(f'{mouse}: {exp}-{group}-{sample}',y=0.9)   
+          plt.suptitle(f'{mouse}: {exp}-{group}-{sample}',y=0.9,fontsize=30)
+          plt.subplots_adjust(hspace=0.6)
           # save figures
           plt.savefig(f'{plot_dir}/{mouse}: {exp}-{group}-{sample}.pdf',format='pdf',bbox_inches='tight');
           plt.close(); # prevent plot from showing in Jupyter notebook
