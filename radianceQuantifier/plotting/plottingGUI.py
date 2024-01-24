@@ -11,6 +11,7 @@ from radianceQuantifier.dataprocessing.miscFunctions import loadPickle, loadNPZ
 import radianceQuantifier.plotting.facetPlotLibrary as fpl 
 import radianceQuantifier.plotting.interactiveGUIElements as ipe
 import matplotlib.colors as mcolors
+import matplotlib.font_manager
 
 if os.name == 'nt':
     dirSep = '\\'
@@ -597,9 +598,30 @@ class MouseImagePlottingOptionsPage(tk.Frame):
         tailCropCB.select()
         tailCropCB.grid(row=6,column=0,columnspan=2,pady=5)
         
+
+        tk.Label(mainWindow,text='Font:').grid(row=6,column=0,sticky=tk.W)
+        
+        fullFonts = matplotlib.font_manager.findSystemFonts()
+        fontsToUse = ['Arial','Baskerville','Courier','Damascus','Didot','Futura','Georgia','GillSans','Helvetica','Impact','Palatino','Papyrus','Tahoma','Times New Roman','Trebuchet MS','Verdana'] 
+        fontIndices = [i for i,x in enumerate(fullFonts) if x[x.rindex('/')+1:].split('.')[0] in fontsToUse]
+        defaultFonts = sorted([x[x.rindex('/')+1:].split('.')[0] for i,x in enumerate(fullFonts) if i in fontIndices])
+        
+        fontEntry = tkinter.ttk.Combobox(mainWindow,values=defaultFonts)
+        fontEntry.grid(row=6,column=1,sticky=tk.W)
+        if 'Helvetica' in defaultFonts:
+            fontEntry.set('Helvetica')
+        else:
+            fontEntry.set(defaultFonts[0])
+
+        #defaultFormats = ['png','pdf']
+        #tk.Label(mainWindow,text='File format:').grid(row=7,column=0,sticky=tk.W)
+        #formatEntry = tkinter.ttk.Combobox(mainWindow,values=defaultFormats)
+        #formatEntry.grid(row=7,column=1,sticky=tk.W)
+        #formatEntry.set(defaultFormats[0])
+        
         def createPlot():
             maxTextLength = len(max(list(groupRenamingDict.values()),key=len))
-            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,titleRenamingDict={'row':rowTitleEntry.get(),'col':columnTitleEntry.get()},groupRecoloringDict=groupRecoloringDict,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=float(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength)
+            plotMouseImages(subsetMatrix,minScaleDict,selectionKeysDf,titleRenamingDict={'row':rowTitleEntry.get(),'col':columnTitleEntry.get()},groupRecoloringDict=groupRecoloringDict,col_order=groupOrderEntry.get().split(','),tailCrop=tailCropVar.get(),innerCol='Sample',row='Day',col='Group',cmap=cmapEntry.get(),save_image=True,imageTitle=titleEntry.get(),fontScale=float(fontScaleEntry.get()),groupRenamingDict=groupRenamingDict,maxTextLength=maxTextLength,font=fontEntry.get(),fileFormat='png')#formatEntry.get())
             tk.messagebox.showinfo(title='Success', message='Plot created!')
             self.FinishButton.config(state=tk.NORMAL)
 

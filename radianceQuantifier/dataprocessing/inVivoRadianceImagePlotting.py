@@ -41,7 +41,7 @@ def selectMatrices(pMatrix,groups='all',days='all',samples='all'):
     selectionTitle = '_'.join([groupTitle,dayTitle])
 
     selectionDict = {}
-    print(pMatrix.files)
+    #print(pMatrix.files)
     allDays,allGroups,allSamples = [x.split('-')[0] for x in pMatrix.files],[x.split('-')[1] for x in pMatrix.files],[x.split('-')[2] for x in pMatrix.files]
     if days == 'all':
         days = pd.unique(allDays).tolist()
@@ -107,7 +107,8 @@ def returnTailCropIndex(axes,cmap,cbar_ax,pMatrixDict,minScaleDict,selectionKeys
     #plottingDf.loc[:,:] = MinMaxScaler().fit_transform(plottingDf.values)
     columnBrightfield = plottingDf.sum(axis=1).to_frame('Value')
     maxIndex = np.argmax(columnBrightfield)
-    maxVal = np.max(columnBrightfield).values[0]
+    #maxVal = np.max(columnBrightfield).values[0]
+    maxVal = np.asarray(np.max(columnBrightfield)).astype(np.float64)
     limit = 0.1*maxVal
     for i in range(maxIndex,columnBrightfield.shape[0]):
         if columnBrightfield.iloc[i,0] < limit:
@@ -291,7 +292,7 @@ def concatenateImage(pMatrixDict,minScaleDict,selectionKeysDf,kwargDict,kwargVal
     
     return fullMatrix,[min(minList),max(maxList)]
 
-def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={'row':'Day','col':'Group'},groupRecoloringDict={},tailCrop=False,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20):
+def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={'row':'Day','col':'Group'},groupRecoloringDict={},tailCrop=False,row='',col='',innerRow='',innerCol='',row_order=[],col_order=[],innerRowOrder=[],innerColOrder=[],cmap='magma',groupRenamingDict={},marginTitles=True,numericDays=True,useConstantImageSize=True,colorbarScale=2,font='Helvetica',fontsize=40,image_dir='',save_image=False,imageTitle='',fontScale=1,maxTextLength=20,fileFormat='png'):
 
     fontDict = {}
     for param,paramVal in zip(['fontname','fontsize'],[font,fontsize]):
@@ -514,4 +515,4 @@ def plotMouseImages(pMatrixDict,minScaleDict,selectionKeysDf,titleRenamingDict={
         paramTitle = '_'.join(paramTitleList)
         experimentName = os.getcwd().split(dirSep)[-1]
         imageTitle = '_'.join(['mouseImage',experimentName,imageTitle,paramTitle])
-        fig.savefig('plots/'+imageTitle+'.png',bbox_extra_artists=(cbar_ax,*levelTitles),bbox_inches='tight')
+        fig.savefig('plots/'+imageTitle+'.'+fileFormat,bbox_extra_artists=(cbar_ax,*levelTitles),bbox_inches='tight')
