@@ -48,7 +48,7 @@ class RadianceQuantifierHomePage(tk.Frame):
         load = Image.open(master.homedirectory+"radianceQuantifierLogo.png")
         width, height = load.size
         SCALEFACTOR = 0.3
-        load = load.resize((int(SCALEFACTOR*width), int(SCALEFACTOR*height)), Image.ANTIALIAS)
+        load = load.resize((int(SCALEFACTOR*width), int(SCALEFACTOR*height)), Image.LANCZOS)
         render = ImageTk.PhotoImage(load)
         img = tk.Label(mainWindow, image=render)
         img.image = render

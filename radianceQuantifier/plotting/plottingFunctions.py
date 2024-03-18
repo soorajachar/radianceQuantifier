@@ -852,7 +852,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       for col in range(ncols):
           axs2.append(fig.add_subplot(gs[1,col])) # create new subplot axis on second row for each day -- for image data -- radiance
       axs3 = fig.add_subplot(gs[2, :]) # plot for % of tumor by section
-      axs4 = fig.add_subplot(gs[3:, 0:np.int(np.ceil(ncols/2))]) # axes for summary chart
+      axs4 = fig.add_subplot(gs[3:, 0:int(np.ceil(ncols/2))]) # axes for summary chart
       
       ### axs1 - plot radiance on first row ###
       plot_all_data(data=df_all_rates.query('MouseID == @mouse'),
@@ -939,7 +939,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
 
       # make the start days not have a decimal
       start_mask = summary_df['Parameter'].str.contains('Start of')
-      summary_df.loc[start_mask, 'Value'] = summary_df.loc[start_mask, 'Value'].apply(lambda x: np.int(x))
+      summary_df.loc[start_mask, 'Value'] = summary_df.loc[start_mask, 'Value'].apply(lambda x: int(x))
 
       # make table as plot
       render_mpl_table(summary_df,ax=axs4)

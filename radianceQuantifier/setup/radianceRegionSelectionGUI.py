@@ -107,7 +107,7 @@ class RadianceRegionSelectionWindow(tk.Frame):
         # Display average image
         avg_image_path = f'plots/Image Processing/avg_merged_image-{os.getcwd().split(dirSep)[-1]}.png'
         avg_image_original = Image.open(avg_image_path)
-        avg_image = avg_image_original.resize((maxWidth, maxHeight), Image.ANTIALIAS)  # Rescale image
+        avg_image = avg_image_original.resize((maxWidth, maxHeight), Image.LANCZOS)  # Rescale image
         avg_image = ImageTk.PhotoImage(avg_image)
 
         # Create a frame to display the image
