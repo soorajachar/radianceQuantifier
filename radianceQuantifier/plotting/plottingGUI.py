@@ -87,12 +87,14 @@ class PlotExperimentWindow(tk.Frame):
         rb2b = tk.Radiobutton(mainWindow,text="Mouse Images",padx = 20, variable=v2, value='mouseImages')
         rb2c = tk.Radiobutton(mainWindow,text="Survival",padx = 20, variable=v2, value='survival')
         rb2d = tk.Radiobutton(mainWindow,text="Summary Sheet (one per mouse)",padx = 20, variable=v2, value='summary')
+        rb2e = tk.Radiobutton(mainWindow,text="Rates",padx = 20, variable=v2, value='rates')
         
         l2.grid(row=0,column=0)
         rb2a.grid(row=1,column=0,sticky=tk.W)
         rb2b.grid(row=2,column=0,sticky=tk.W)
         rb2c.grid(row=3,column=0,sticky=tk.W)
         rb2d.grid(row=4,column=0,sticky=tk.W)
+        rb2e.grid(row=5,column=0,sticky=tk.W)
         
         def collectInputs():
             global useModifiedDf
@@ -147,7 +149,7 @@ class PlotExperimentWindow(tk.Frame):
                 exp_date_name = os.getcwd().split(dirSep)[-1]
                 region_long = [item for item in os.listdir('outputData/ROI Radiance Calculation') if (item.startswith('left') and item.endswith('all'))][0]
 
-                df_all_rates = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/BayesianPriors/{exp_date_name}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl')
+                df_all_rates = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/BayesianPriors/{exp_date_name}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl') # reload the data that has all the rate info
                 labelDf = pd.read_hdf(f'outputData/labelDf_all-{exp_date_name}.hdf') # reload data that now has metadata for each image
                 matrix = np.load(f'outputData/bigMatrix-{exp_date_name}.npy') # reload the raw image data
 
@@ -155,6 +157,12 @@ class PlotExperimentWindow(tk.Frame):
 
                 plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir)
                 tk.messagebox.showinfo(title='Success', message='Summary sheet successfully created for each mouse.')
+            elif dataType == 'rates':
+                exp_date_name = os.getcwd().split(dirSep)[-1]
+                region_long = [item for item in os.listdir('outputData/ROI Radiance Calculation') if (item.startswith('left') and item.endswith('all'))][0]
+
+                df_all_rates = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/BayesianPriors/{exp_date_name}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl') # reload the data that has all the rate info
+
 
 
         buttonWindow = tk.Frame(self)
