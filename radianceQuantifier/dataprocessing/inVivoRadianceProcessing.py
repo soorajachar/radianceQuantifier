@@ -1008,6 +1008,9 @@ def fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True):
     processed_df.to_pickle(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.pkl')
     processed_df.to_excel(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.xlsx')
 
+    np.savetxt(f'misc/maxWidth-{experimentName}.txt',[maxWidth],fmt='%d')
+    np.savetxt(f'misc/maxHeight-{experimentName}.txt',[maxHeight],fmt='%d')
+
   return processed_df, maxWidth, maxHeight
 
 

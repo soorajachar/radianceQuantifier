@@ -15,20 +15,6 @@ class RadianceRegionSelectionWindow(tk.Frame):
         tk.Frame.__init__(self, master)
         mainWindow = tk.Frame(self)
         mainWindow.pack(side=tk.TOP,padx=10)
-        
-        # l1 = tk.Label(mainWindow,text='Set color bar limits:')
-        # v = tk.StringVar(value='manual')
-        # rb1a = tk.Radiobutton(mainWindow, text="Automatically (pytesseract)",padx = 20, variable=v, value='auto')
-        # rb1b = tk.Radiobutton(mainWindow,text="Manually",padx = 20, variable=v, value='manual')
-        # l1.grid(row=0,column=0)
-        # rb1a.grid(row=1,column=0,sticky=tk.W)
-        # rb1b.grid(row=2,column=0,sticky=tk.W)
-        # tk.Label(mainWindow,text='Min:').grid(row=2,column=1,sticky=tk.W)
-        # minEntry = tk.Entry(mainWindow,width=5)
-        # minEntry.grid(row=2,column=2,sticky=tk.W)
-        # tk.Label(mainWindow,text='Max:').grid(row=2,column=3,sticky=tk.W)
-        # maxEntry = tk.Entry(mainWindow,width=5)
-        # maxEntry.grid(row=2,column=4,sticky=tk.W)
 
         global selected_rect, canvas
         selected_rect = None  # declare selected_rect as a global variable
