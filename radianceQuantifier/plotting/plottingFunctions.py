@@ -22,7 +22,7 @@ else:
 
 def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir, bayesian_key):
   '''
-  Generate plots that show distributions of growth, decay, and relapse rates BEFORE Bayesian Priors correction applied.
+  Generate plots that show distributions of growth, decay, and relapse rates before/after Bayesian Priors correction applied.
 
   Input:
   data -- dataframe after fitting that contains rate information (before/after Bayesian Priors performed)
@@ -43,7 +43,7 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.kdeplot(np.log10(growth_rates),label='Growth',cut=0,color='green')
   g = sns.kdeplot(np.log10(decay_rates),label='Decay',cut=0,color='blue')
   g = sns.kdeplot(np.log10(relapse_rates),label='Relapse',cut=0,color='red')
-  plt.text(1.4,0.2,f'N={len(data.reset_index().MouseID.unique())} mice')
+  plt.text(1.4,0.2,f'N={len(data.reset_index().MouseID.unique())} mice',fontsize='x-small')
   plt.xlim([-3,3])
   plt.xlabel('$log_{10}$(Rate)')
   plt.title(f'All Data - {bayesian_key} Bayesian Priors')
@@ -57,8 +57,8 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.stripplot(x=growth_rates,label='Growth',color='green',legend=False)
   greenrect=mpatches.Rectangle((3,-0.15),200,0.3, fill=False,color="green",linestyle='--',linewidth=2)
   plt.gca().add_patch(greenrect)
-  plt.text(3.2,-0.17,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(50,0.47,f'N={len(growth_rates)} mice',fontsize='small')
+  plt.text(3.2,-0.17,'outliers to correct with Bayesian Priors',fontsize='xx-small')
+  plt.text(50,0.47,f'N={len(growth_rates)} mice',fontsize='x-small')
   g.set_xscale('log')
   g.set_xlim([0.04,300])
   g.set_xlabel('Growth Rate')
@@ -82,8 +82,8 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   greenrect=mpatches.Rectangle((3,1.8),200,2.4, fill=False,color="green",linestyle='--',linewidth=2)
   plt.gca().add_patch(greenrect)
-  plt.text(3,4.32,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(50,1,f'N={counter} mice',fontsize='small')
+  plt.text(3,4.32,'outliers to correct with Bayesian Priors',fontsize='xx-small')
+  plt.text(50,1,f'N={counter} mice',fontsize='x-small')
   plt.xscale('log')
   plt.xlim([0.04,300])
   plt.xlabel('Growth Rate')
@@ -121,8 +121,8 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   axs[0].set_title(f'{bayesian_key} Bayesian Priors - Growth Rate - Outliers',fontsize='small')
   axs[1].set_title(f'{bayesian_key} Bayesian Priors - Growth Rate - Normal',fontsize='small')
-  axs[0].text(0.9,1,f'N={counter_outliers} mice',fontsize='small')
-  axs[1].text(0.9,1,f'N={counter_normal} mice',fontsize='small')
+  axs[0].text(0.9,1,f'N={counter_outliers} mice',fontsize='x-small')
+  axs[1].text(0.9,1,f'N={counter_normal} mice',fontsize='x-small')
   plt.savefig(f'{plot_dir}/growth_rsquared_vs_num_data_{bayesian_key}_Bayesian.pdf',format='pdf',bbox_inches='tight')
 
   ## DECAY PHASE PLOTS ##
@@ -132,8 +132,8 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.stripplot(x=decay_rates,label='Decay',color='blue',legend=False)
   bluerect=mpatches.Rectangle((50,-0.15),200,0.3, fill=False,color="blue",linestyle='--',linewidth=2)
   plt.gca().add_patch(bluerect)
-  plt.text(50,-0.17,'outliers to remove',fontsize='x-small')
-  plt.text(50,0.47,f'N={len(decay_rates)} mice',fontsize='small')
+  plt.text(50,-0.17,'outliers to remove',fontsize='xx-small')
+  plt.text(50,0.47,f'N={len(decay_rates)} mice',fontsize='x-small')
   g.set_xscale('log')
   g.set_xlabel('Decay Rate')
   g.set_title(f'{bayesian_key} Bayesian Priors - Decay Rate')
@@ -159,9 +159,9 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   bluerect=mpatches.Rectangle((50,1.6),200,4.7, fill=False,color="blue",linestyle='--',linewidth=2)
   plt.gca().add_patch(bluerect)
-  plt.text(50,6.8,'outliers to remove',fontsize='x-small')
+  plt.text(50,6.8,'outliers to remove',fontsize='xx-small')
   plt.yticks([2,4,6,8,10,12,14,16,18])
-  plt.text(0.08,0.75,f'N={counter} mice',fontsize='small')
+  plt.text(0.08,0.75,f'N={counter} mice',fontsize='x-small')
   plt.xscale('log')
   plt.xlim([0.04,300])
   plt.xlabel('Decay Rate')
@@ -177,8 +177,8 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.stripplot(x=relapse_rates,label='Relapse',color='red',legend=False)
   redrect=mpatches.Rectangle((3,-0.15),200,0.3, fill=False,color="red",linestyle='--',linewidth=2)
   plt.gca().add_patch(redrect)
-  plt.text(3.2,-0.17,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(50,0.47,f'N={len(relapse_rates)} mice',fontsize='small')
+  plt.text(3.2,-0.17,'outliers to correct\nwith Bayesian Priors',fontsize='xx-small')
+  plt.text(50,0.47,f'N={len(relapse_rates)} mice',fontsize='x-small')
   g.set_xscale('log')
   g.set_xlabel('Relapse Rate')
   g.set_title(f'{bayesian_key} Bayesian Priors - Relapse Rate')
@@ -204,8 +204,8 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   redrect=mpatches.Rectangle((3,1.8),200,9.5, fill=False,color="red",linestyle='--',linewidth=2)
   plt.gca().add_patch(redrect)
-  plt.text(3,12,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(20,0.7,f'N={counter} mice',fontsize='small')
+  plt.text(3,13,'outliers to correct\nwith Bayesian Priors',fontsize='xx-small')
+  plt.text(20,0.7,f'N={counter} mice',fontsize='x-small')
   plt.yticks(np.arange(2,26,2))
   plt.xscale('log')
   plt.xlim([2e-3,300])
