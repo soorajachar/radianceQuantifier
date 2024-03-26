@@ -64,16 +64,16 @@ class RadianceRegionSelectionWindow(tk.Frame):
             
             # error handling
             error_flag = False
-            if (check8_var.get() == 1) & (selected_rect is None): # selected custom region, but didn't draw rectangle
+            if (check2_var.get() == 1) & (selected_rect is None): # selected custom region, but didn't draw rectangle
                 error_flag = True
                 tk.messagebox.showinfo(title='ERROR', message='Please draw a custom region.')
-            if (check1_var.get() == 0) & (check8_var.get() == 0): # no buttons selected
+            if (check1_var.get() == 0) & (check2_var.get() == 0) & (check3_var.get() == 0): # no buttons selected
                 error_flag = True
                 tk.messagebox.showinfo(title='ERROR', message='Please select a button.')
-            if (check8_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) == 0):
+            if (check2_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) == 0): # no custom name entered
                 error_flag = True
                 tk.messagebox.showinfo(title='ERROR', message='Please enter a name for the selected region.')
-            if (check8_var.get() == 1) & (selected_rect is not None) & (roi_entry.get().lower() == 'all'):
+            if (check2_var.get() == 1) & (selected_rect is not None) & (roi_entry.get().lower() == 'all'): # can't enter a name of "all"
                 error_flag = True
                 tk.messagebox.showinfo(title='ERROR', message='Invalid custom name. Please enter a different name for the selected region.')
 
@@ -83,10 +83,24 @@ class RadianceRegionSelectionWindow(tk.Frame):
                 calculate_radiance(left=0,right=maxWidth,top=0,bottom=maxHeight,text='all')
                 finished_bool = True
             # selected custom region
-            if (check8_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) > 0) & (error_flag == False):
+            if (check2_var.get() == 1) & (selected_rect is not None) & (len(roi_entry.get()) > 0) & (error_flag == False):
                 calculate_radiance(sel_left,sel_right,sel_top,sel_bottom,text=roi_entry.get())
                 finished_bool = True
-            
+
+            # selected default regions
+            if (check3_var.get() == 1) & (error_flag == False):
+                # calculate_radiance(left=19,right=164,top=0,bottom=64,text='snout')
+                # calculate_radiance(left=19,right=164,top=64,bottom=86,text='neck')
+                # calculate_radiance(left=19,right=164,top=86,bottom=132,text='lungs')
+                # calculate_radiance(left=19,right=164,top=132,bottom=212,text='liver')
+                # calculate_radiance(left=19,right=164,top=212,bottom=234,text='abdomen')
+                # calculate_radiance(left=19,right=61,top=234,bottom=305,text='bmR')
+                # calculate_radiance(left=61,right=121,top=234,bottom=305,text='bladder')
+                # calculate_radiance(left=121,right=164,top=234,bottom=305,text='bmL')
+                # calculate_radiance(left=19,right=164,top=305,bottom=maxHeight,text='feet')
+                finished_bool = True
+
+            # finished calculating radiance in selected ROI
             if finished_bool == True: tk.messagebox.showinfo(title='Success', message='Radiance calculation complete!\nSelect another region or click "Finished" to return to main window.')
 
 
@@ -114,23 +128,26 @@ class RadianceRegionSelectionWindow(tk.Frame):
         # Set up check buttons
         # initialize
         check1_var = tk.IntVar() # entire mouse
-        check8_var = tk.IntVar() # custom region
+        check2_var = tk.IntVar() # custom region
+        check3_var = tk.IntVar() # default regions
         
         # make buttons
         check1 = tk.Checkbutton(mainWindow, text="Entire Image", variable=check1_var)
-        check8 = tk.Checkbutton(mainWindow, text="Custom Region", variable=check8_var)
+        check2 = tk.Checkbutton(mainWindow, text="Custom Region", variable=check2_var)
+        check3 = tk.Checkbutton(mainWindow, text="Default Regions", variable=check3_var)
         roi_entry_label = tk.Label(mainWindow, text="ROI Name:")
         roi_entry = tk.Entry(mainWindow)
        
         # layout for buttons
         check1.grid(row=0, column=3, sticky='w')
-        check8.grid(row=1, column=3, sticky='w')
+        check2.grid(row=1, column=3, sticky='w')
+        check3.grid(row=2, column=3, sticky='w')
         roi_entry_label.grid(row=1, column=4, sticky='w')
         roi_entry.grid(row=1, column=5, sticky='w')
         
         # Create a button to confirm the selection
         confirm_button = tk.Button(mainWindow, text="Calculate Radiance", command=(lambda : handle_checkbutton_region_selection()))
-        confirm_button.grid(row=2, column=3, sticky='n')
+        confirm_button.grid(row=3, column=3, sticky='n')
 
         # Bind mouse events for rectangle drawing
         canvas.bind("<Button-1>", on_canvas_click)
