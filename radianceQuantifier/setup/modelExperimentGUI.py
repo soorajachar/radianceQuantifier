@@ -111,7 +111,7 @@ class ModelExperimentWindow(tk.Frame):
 
                 # make plots
                 plot_dir = f'plots/After Bayesian Priors/{selected_region_str}'
-                make_bayesian_plots(mice_fit_df_noBayesian,growth_rates,decay_rates,relapse_rates,plot_dir,bayesian_key='After')
+                make_bayesian_plots(mice_fit_df_Bayesian,growth_rates,decay_rates,relapse_rates,plot_dir,bayesian_key='After')
 
             
     
