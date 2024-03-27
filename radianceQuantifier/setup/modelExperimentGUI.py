@@ -3,7 +3,7 @@ import pickle, os, json, math, subprocess, numpy as np, pandas as pd, tkinter as
 from tkinter import ttk
 from tkinter import filedialog as fd
 from radianceQuantifier.dataprocessing.miscFunctions import loadPickle
-from radianceQuantifier.dataprocessing.modelingFunctions import identify_phases, fit_data, get_rates
+from radianceQuantifier.dataprocessing.modelingFunctions import identify_phases, fit_data, get_rates, generate_final_params_df, count_mice_by_phase_type
 from radianceQuantifier.plotting.plottingFunctions import make_bayesian_plots
 
 if os.name == 'nt':
@@ -63,10 +63,20 @@ class ModelExperimentWindow(tk.Frame):
             #### Look at inital distributions of rates before Bayesian Priors ####
             alphas=[0,0,0,0,0] # all zero so no Bayesian Priors yet
             mice_fit_df_noBayesian = fit_data(data=phases_df,alphas=alphas)  # no Bayesian Priors
+            final_params_df_noBayesian = generate_final_params_df(mice_fit_df_noBayesian) # df with one row per mouse with param info
+            cat_df, cat_dict = count_mice_by_phase_type(final_params_df_noBayesian) # df/dict with info on number/IDs of mice in each category
+            
             # save the data
             if not os.path.exists(f'{data_dir}/{selected_region_str}/NoBayesianPriors'): os.makedirs(f'{data_dir}/{selected_region_str}/NoBayesianPriors') # make dir if doesn't exist
             mice_fit_df_noBayesian.to_pickle(f'{data_dir}/{selected_region_str}/NoBayesianPriors/{os.getcwd().split(dirSep)[-1]}_fit2model_all_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}_{alphas[3]}_{alphas[4]}_{selected_region_str}.pkl')
-    
+            final_params_df_noBayesian.to_pickle(f'{data_dir}/{selected_region_str}/NoBayesianPriors/{os.getcwd().split(dirSep)[-1]}_final_params_df_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}_{alphas[3]}_{alphas[4]}_{selected_region_str}.pkl')
+            cat_df.to_pickle(f'{data_dir}/{selected_region_str}/{os.getcwd().split(dirSep)[-1]}_cat_df_{selected_region_str}.pkl')
+            cat_df.to_csv(f'{data_dir}/{selected_region_str}/{os.getcwd().split(dirSep)[-1]}_cat_df_{selected_region_str}.csv')
+            
+            cat_dict_file = open(f'{data_dir}/{selected_region_str}/{os.getcwd().split(dirSep)[-1]}_cat_dict_{selected_region_str}.pkl', 'wb')
+            pickle.dump(cat_dict, cat_dict_file)
+            cat_dict_file.close()
+
             # initial mean and stdev of pop INCLUDING outliers -- before Bayesian priors
             growth_rates, decay_rates, relapse_rates = get_rates(mice_fit_df_noBayesian,include_outliers=True) # extract the rates from the df
             print('### Initial Distributions ###')
@@ -96,11 +106,14 @@ class ModelExperimentWindow(tk.Frame):
 
                 # now do Bayesian Priors
                 mice_fit_df_Bayesian = fit_data(data=phases_df,alphas=alphas)
+                final_params_df_Bayesian = generate_final_params_df(mice_fit_df_Bayesian) # df with one row per mouse with param info
+                # don't need to make cat_df/cat_dict here because it is the same as the no Bayesian data (no info on rates) #
                 
                 # save the data
                 if not os.path.exists(f'{data_dir}/{selected_region_str}/BayesianPriors'): os.makedirs(f'{data_dir}/{selected_region_str}/BayesianPriors') # make dir if doesn't exist
                 mice_fit_df_Bayesian.to_pickle(f'{data_dir}/{selected_region_str}/BayesianPriors/{os.getcwd().split(dirSep)[-1]}_fit2model_all_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}_{alphas[3]}_{alphas[4]}_{selected_region_str}.pkl')
-    
+                final_params_df_Bayesian.to_pickle(f'{data_dir}/{selected_region_str}/BayesianPriors/{os.getcwd().split(dirSep)[-1]}_final_params_df_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}_{alphas[3]}_{alphas[4]}_{selected_region_str}.pkl')
+
                 # get new mean and stdev of pop AFTER Bayesian Priors
                 growth_rates, _, relapse_rates = get_rates(mice_fit_df_Bayesian,include_outliers=True) # keep outliers for growth and relapse to do Bayesian Priors
                 _, decay_rates , _ = get_rates(mice_fit_df_Bayesian,include_outliers=False) # only remove outliers for decay phase
