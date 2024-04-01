@@ -286,7 +286,7 @@ def plot_image_widths(matrixList, matrix_rescaled_list, plot_dir):
   sns.kdeplot([x.shape[1] for x in matrixList],cut=0,c='k',label='Original')
   sns.kdeplot([x.shape[1] for x in matrix_rescaled_list],cut=0,c='C1',label='Rescaled')
   sns.rugplot([x.shape[1] for x in matrix_rescaled_list],c='r')
-  plt.xlim([80,300])
+  plt.xlim([70,350])
   plt.legend()
   plt.xlabel('Widths')
   plt.savefig(f'{plot_dir}/KDE_widths_pre_post_height_scaling-{os.getcwd().split(dirSep)[-1]}.pdf',format='pdf',bbox_inches='tight')
