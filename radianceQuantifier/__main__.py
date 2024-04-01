@@ -23,7 +23,7 @@ else:
 class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
-        self.title('radianceQuantifier '+version('radianceQuantifier')+' - Adam')
+        self.title('maRQup '+version('radianceQuantifier')+' - Adam')
         self._frame = None
         self.homedirectory = dirSep.join(os.path.abspath(radianceQuantifier.__file__).split(dirSep)[:-1])
         if self.homedirectory[-1] != '/':
