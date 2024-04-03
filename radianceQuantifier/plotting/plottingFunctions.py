@@ -679,13 +679,18 @@ def plotAvgImgOverTime(df_all_rates,labelDf,matrix,
     
     # dictionaries to deal with inputs
     dataTypeDict = {'radiance':0,'mousePixel':1,'brightfield':2}
+
+    # top, bottom, left, right
     regionDict = { 'all':[(  0, -1),( 0,-1)],
-                 'snout':[(  0, 60),(20,165)],
-                 'lungs':[( 60,110),(20,165)],
-                 'liver':[(110,210),(20,165)],
-               'abdomen':[(210,240),(20,165)],
-                  'bmRm':[(240,320),(20,92)], # bone marrow (mouse right)
-                  'bmLm':[(240,320),(93,165)]} # bone marrow (mouse left)
+                 'snout':[(  0, 64),(19,164)],
+                  'neck':[(  64, 86),(19,164)],
+                 'lungs':[( 86,132),(19,164)],
+                 'liver':[(132,212),(19,164)],
+               'abdomen':[(212,234),(19,164)],
+                   'bmR':[(234,305),(19,61)], # bone marrow (mouse right)
+               'bladder':[(234,305),(61,121)],
+                   'bmL':[(234,305),(121,164)], # bone marrow (mouse left)
+                  'feet':[(305,385),(19,164)]} 
     
     
     
@@ -755,19 +760,36 @@ def plotAvgImgOverTime(df_all_rates,labelDf,matrix,
                     else:
                         axs[i-counter].set_title(f'Day {day[1:]}');
                     
-                    if sectionFlag:
-                        snout = mpatches.Rectangle((20,1),145,59, linewidth=2, edgecolor='C0', facecolor='none')
-                        lungs = mpatches.Rectangle((20,60),145,50, linewidth=2, edgecolor='C1', facecolor='none')
-                        liver = mpatches.Rectangle((20,110),145,100, linewidth=2, edgecolor='C2', facecolor='none')
-                        abdomen = mpatches.Rectangle((20,210),145,30, linewidth=2, edgecolor='C3', facecolor='none')
-                        bmL = mpatches.Rectangle((20,240),72,80, linewidth=2, edgecolor='C4', facecolor='none') # bone marrow left
-                        bmR = mpatches.Rectangle((93,240),72,80, linewidth=2, edgecolor='C5', facecolor='none') # bone marrow right
+                    if sectionFlag: # (top, bottom), (left, right) ## (x,y), height, width
+                        snout = mpatches.Rectangle((regionDict['snout'][1][0],regionDict['snout'][0][0]),regionDict['snout'][1][1]-regionDict['snout'][1][0],regionDict['snout'][0][1]-regionDict['snout'][0][0], linewidth=2, edgecolor='green', facecolor='none')
+                        
+                        neck = mpatches.Rectangle((regionDict['neck'][1][0],regionDict['neck'][0][0]),regionDict['neck'][1][1]-regionDict['neck'][1][0],regionDict['neck'][0][1]-regionDict['neck'][0][0], linewidth=2, edgecolor='green', facecolor='none')
+
+                        lungs = mpatches.Rectangle((regionDict['lungs'][1][0],regionDict['lungs'][0][0]),regionDict['lungs'][1][1]-regionDict['lungs'][1][0],regionDict['lungs'][0][1]-regionDict['lungs'][0][0], linewidth=2, edgecolor='green', facecolor='none')
+                        
+                        liver = mpatches.Rectangle((regionDict['liver'][1][0],regionDict['liver'][0][0]),regionDict['liver'][1][1]-regionDict['liver'][1][0],regionDict['liver'][0][1]-regionDict['liver'][0][0], linewidth=2, edgecolor='grey', facecolor='none')
+                        
+                        abdomen = mpatches.Rectangle((regionDict['abdomen'][1][0],regionDict['abdomen'][0][0]),regionDict['abdomen'][1][1]-regionDict['abdomen'][1][0],regionDict['abdomen'][0][1]-regionDict['abdomen'][0][0], linewidth=2, edgecolor='grey', facecolor='none')
+
+                        bmR = mpatches.Rectangle((regionDict['bmR'][1][0],regionDict['bmR'][0][0]),regionDict['bmR'][1][1]-regionDict['bmR'][1][0],regionDict['bmR'][0][1]-regionDict['bmR'][0][0], linewidth=2, edgecolor='purple', facecolor='none') # bone marrow right
+
+                        bladder = mpatches.Rectangle((regionDict['bladder'][1][0],regionDict['bladder'][0][0]),regionDict['bladder'][1][1]-regionDict['bladder'][1][0],regionDict['bladder'][0][1]-regionDict['bladder'][0][0], linewidth=2, edgecolor='purple', facecolor='none')
+
+                        bmL = mpatches.Rectangle((regionDict['bmL'][1][0],regionDict['bmL'][0][0]),regionDict['bmL'][1][1]-regionDict['bmL'][1][0],regionDict['bmL'][0][1]-regionDict['bmL'][0][0], linewidth=2, edgecolor='purple', facecolor='none') # bone marrow left
+
+                        feet = mpatches.Rectangle((regionDict['feet'][1][0],regionDict['feet'][0][0]),regionDict['feet'][1][1]-regionDict['feet'][1][0],regionDict['feet'][0][1]-regionDict['feet'][0][0], linewidth=2, edgecolor='purple', facecolor='none') # bone marrow left
+
+
+                        
                         axs[i-counter].add_patch(snout)
+                        axs[i-counter].add_patch(neck)
                         axs[i-counter].add_patch(lungs)
                         axs[i-counter].add_patch(liver)
                         axs[i-counter].add_patch(abdomen)
-                        axs[i-counter].add_patch(bmL)
                         axs[i-counter].add_patch(bmR)
+                        axs[i-counter].add_patch(bladder)
+                        axs[i-counter].add_patch(bmL)
+                        axs[i-counter].add_patch(feet)
                         
                 else:
                     axs[i-counter].imshow(avgMatrix,cmap=cmap)
@@ -812,6 +834,8 @@ def plotAvgImgOverTime(df_all_rates,labelDf,matrix,
     totValsDf = totValsDf.rename_axis('Time')
     
     return avgValsDf,totValsDf
+
+
 
 
 

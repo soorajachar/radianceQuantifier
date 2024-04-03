@@ -89,15 +89,15 @@ class RadianceRegionSelectionWindow(tk.Frame):
 
             # selected default regions
             if (check3_var.get() == 1) & (error_flag == False):
-                # calculate_radiance(left=19,right=164,top=0,bottom=64,text='snout')
-                # calculate_radiance(left=19,right=164,top=64,bottom=86,text='neck')
-                # calculate_radiance(left=19,right=164,top=86,bottom=132,text='lungs')
-                # calculate_radiance(left=19,right=164,top=132,bottom=212,text='liver')
-                # calculate_radiance(left=19,right=164,top=212,bottom=234,text='abdomen')
-                # calculate_radiance(left=19,right=61,top=234,bottom=305,text='bmR')
-                # calculate_radiance(left=61,right=121,top=234,bottom=305,text='bladder')
-                # calculate_radiance(left=121,right=164,top=234,bottom=305,text='bmL')
-                # calculate_radiance(left=19,right=164,top=305,bottom=maxHeight,text='feet')
+                calculate_radiance(left=19,right=164,top=0,bottom=64,text='snout')
+                calculate_radiance(left=19,right=164,top=64,bottom=86,text='neck')
+                calculate_radiance(left=19,right=164,top=86,bottom=132,text='lungs')
+                calculate_radiance(left=19,right=164,top=132,bottom=212,text='liver')
+                calculate_radiance(left=19,right=164,top=212,bottom=234,text='abdomen')
+                calculate_radiance(left=19,right=61,top=234,bottom=305,text='bmR')
+                calculate_radiance(left=61,right=121,top=234,bottom=305,text='bladder')
+                calculate_radiance(left=121,right=164,top=234,bottom=305,text='bmL')
+                calculate_radiance(left=19,right=164,top=305,bottom=maxHeight,text='feet')
                 finished_bool = True
 
             # finished calculating radiance in selected ROI
