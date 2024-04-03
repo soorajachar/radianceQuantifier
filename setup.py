@@ -16,6 +16,9 @@ install_requires = [
 'Pillow',
 'plateypus',
 'scikit_learn',
+'kneed',
+'lmfit',
+'pickle5'
 ]
 
 classifiers = [
