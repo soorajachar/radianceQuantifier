@@ -23,12 +23,12 @@ else:
 class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
-        self.title('maRQup '+version('radianceQuantifier')+' - Adam')
+        self.title('maRQup '+version('radianceQuantifier'))
         self._frame = None
         self.homedirectory = dirSep.join(os.path.abspath(radianceQuantifier.__file__).split(dirSep)[:-1])
         if self.homedirectory[-1] != '/':
             self.homedirectory+='/'
-        print('radianceQuantifier location: '+self.homedirectory)
+        print('maRQup location: '+self.homedirectory)
         self.switch_frame(RadianceQuantifierHomePage)
 
     def switch_frame(self, frame_class,*args):
