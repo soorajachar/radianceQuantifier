@@ -22,7 +22,7 @@ else:
 
 def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir, bayesian_key):
   '''
-  Generate plots that show distributions of growth, decay, and relapse rates BEFORE Bayesian Priors correction applied.
+  Generate plots that show distributions of growth, decay, and relapse rates before/after Bayesian Priors correction applied.
 
   Input:
   data -- dataframe after fitting that contains rate information (before/after Bayesian Priors performed)
@@ -43,7 +43,7 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.kdeplot(np.log10(growth_rates),label='Growth',cut=0,color='green')
   g = sns.kdeplot(np.log10(decay_rates),label='Decay',cut=0,color='blue')
   g = sns.kdeplot(np.log10(relapse_rates),label='Relapse',cut=0,color='red')
-  plt.text(1.4,0.2,f'N={len(data.reset_index().MouseID.unique())} mice')
+  plt.text(1.4,0.2,f'N={len(data.reset_index().MouseID.unique())} mice',fontsize='x-small')
   plt.xlim([-3,3])
   plt.xlabel('$log_{10}$(Rate)')
   plt.title(f'All Data - {bayesian_key} Bayesian Priors')
@@ -57,11 +57,11 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.stripplot(x=growth_rates,label='Growth',color='green',legend=False)
   greenrect=mpatches.Rectangle((3,-0.15),200,0.3, fill=False,color="green",linestyle='--',linewidth=2)
   plt.gca().add_patch(greenrect)
-  plt.text(3.2,-0.17,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(50,0.47,f'N={len(growth_rates)} mice',fontsize='small')
+  plt.text(3.2,-0.17,'outliers to correct with Bayesian Priors',fontsize='xx-small')
+  plt.text(50,0.47,f'N={len(growth_rates)} mice',fontsize='x-small')
   g.set_xscale('log')
-  g.set_xlim([0.04,300])
-  g.set_xlabel('Growth Rate')
+  g.set_xlim([0.04,400])
+  g.set_xlabel('Tumor Growth Rate ($k_{G}$)',color='green')
   g.set_title(f'{bayesian_key} Bayesian Priors - Growth Rate')
   plt.savefig(f'{plot_dir}/growth_swarm_{bayesian_key}_Bayesian.pdf',format='pdf',bbox_inches='tight')
 
@@ -82,11 +82,11 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   greenrect=mpatches.Rectangle((3,1.8),200,2.4, fill=False,color="green",linestyle='--',linewidth=2)
   plt.gca().add_patch(greenrect)
-  plt.text(3,4.32,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(50,1,f'N={counter} mice',fontsize='small')
+  plt.text(3,4.32,'outliers to correct with Bayesian Priors',fontsize='xx-small')
+  plt.text(50,1,f'N={counter} mice',fontsize='x-small')
   plt.xscale('log')
-  plt.xlim([0.04,300])
-  plt.xlabel('Growth Rate')
+  plt.xlim([0.04,400])
+  plt.xlabel('Tumor Growth Rate ($k_{G}$)',color='green')
   plt.ylabel('Number or Data Points')
   plt.title(f'{bayesian_key} Bayesian Priors - Growth Rate')
   plt.ylim([0.8,11])
@@ -121,8 +121,8 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   axs[0].set_title(f'{bayesian_key} Bayesian Priors - Growth Rate - Outliers',fontsize='small')
   axs[1].set_title(f'{bayesian_key} Bayesian Priors - Growth Rate - Normal',fontsize='small')
-  axs[0].text(0.9,1,f'N={counter_outliers} mice',fontsize='small')
-  axs[1].text(0.9,1,f'N={counter_normal} mice',fontsize='small')
+  axs[0].text(0.9,1,f'N={counter_outliers} mice',fontsize='x-small')
+  axs[1].text(0.9,1,f'N={counter_normal} mice',fontsize='x-small')
   plt.savefig(f'{plot_dir}/growth_rsquared_vs_num_data_{bayesian_key}_Bayesian.pdf',format='pdf',bbox_inches='tight')
 
   ## DECAY PHASE PLOTS ##
@@ -132,10 +132,10 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.stripplot(x=decay_rates,label='Decay',color='blue',legend=False)
   bluerect=mpatches.Rectangle((50,-0.15),200,0.3, fill=False,color="blue",linestyle='--',linewidth=2)
   plt.gca().add_patch(bluerect)
-  plt.text(50,-0.17,'outliers to remove',fontsize='x-small')
-  plt.text(50,0.47,f'N={len(decay_rates)} mice',fontsize='small')
+  plt.text(50,-0.17,'outliers to remove',fontsize='xx-small')
+  plt.text(50,0.47,f'N={len(decay_rates)} mice',fontsize='x-small')
   g.set_xscale('log')
-  g.set_xlabel('Decay Rate')
+  g.set_xlabel('Tumor Decay Rate ($k_{D}$)',color='blue')
   g.set_title(f'{bayesian_key} Bayesian Priors - Decay Rate')
   plt.savefig(f'{plot_dir}/decay_swarm_{bayesian_key}_Bayesian.pdf',format='pdf',bbox_inches='tight')
 
@@ -159,12 +159,12 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   bluerect=mpatches.Rectangle((50,1.6),200,4.7, fill=False,color="blue",linestyle='--',linewidth=2)
   plt.gca().add_patch(bluerect)
-  plt.text(50,6.8,'outliers to remove',fontsize='x-small')
+  plt.text(50,6.8,'outliers to remove',fontsize='xx-small')
   plt.yticks([2,4,6,8,10,12,14,16,18])
-  plt.text(0.08,0.75,f'N={counter} mice',fontsize='small')
+  plt.text(0.08,0.75,f'N={counter} mice',fontsize='x-small')
   plt.xscale('log')
-  plt.xlim([0.04,300])
-  plt.xlabel('Decay Rate')
+  plt.xlim([0.04,400])
+  plt.xlabel('Tumor Decay Rate ($k_{D}$)',color='blue')
   plt.ylabel('Number of Data Points')
   plt.title(f'{bayesian_key} Bayesian Priors - Decay Rate')
   plt.ylim([0.5,19])
@@ -177,12 +177,12 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
   g = sns.stripplot(x=relapse_rates,label='Relapse',color='red',legend=False)
   redrect=mpatches.Rectangle((3,-0.15),200,0.3, fill=False,color="red",linestyle='--',linewidth=2)
   plt.gca().add_patch(redrect)
-  plt.text(3.2,-0.17,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(50,0.47,f'N={len(relapse_rates)} mice',fontsize='small')
+  plt.text(3.2,-0.17,'outliers to correct with Bayesian Priors',fontsize='xx-small')
+  plt.text(50,0.47,f'N={len(relapse_rates)} mice',fontsize='x-small')
   g.set_xscale('log')
-  g.set_xlabel('Relapse Rate')
+  g.set_xlabel('Tumor Relapse Rate ($k_{R}$)',color='red')
   g.set_title(f'{bayesian_key} Bayesian Priors - Relapse Rate')
-  g.set_xlim([0.04,250])
+  g.set_xlim([0.04,400])
   plt.savefig(f'{plot_dir}/relapse_swarm_{bayesian_key}_Bayesian.pdf',format='pdf',bbox_inches='tight')
 
   # Rate vs Number of Data Points #
@@ -204,12 +204,12 @@ def make_bayesian_plots(data, growth_rates, decay_rates, relapse_rates, plot_dir
 
   redrect=mpatches.Rectangle((3,1.8),200,9.5, fill=False,color="red",linestyle='--',linewidth=2)
   plt.gca().add_patch(redrect)
-  plt.text(3,12,'outliers to correct with Bayesian Priors',fontsize='x-small')
-  plt.text(20,0.7,f'N={counter} mice',fontsize='small')
+  plt.text(3,12,'outliers to correct with Bayesian Priors',fontsize='xx-small')
+  plt.text(20,0.7,f'N={counter} mice',fontsize='x-small')
   plt.yticks(np.arange(2,26,2))
   plt.xscale('log')
-  plt.xlim([2e-3,300])
-  plt.xlabel('Relapse Rate')
+  plt.xlim([0.04,400])
+  plt.xlabel('Tumor Relapse Rate ($k_{R}$)',color='red')
   plt.ylabel('Number of Data Points')
   plt.title(f'{bayesian_key} Bayesian Priors - Relapse Rate')
   plt.ylim([0.5,25])
@@ -286,7 +286,7 @@ def plot_image_widths(matrixList, matrix_rescaled_list, plot_dir):
   sns.kdeplot([x.shape[1] for x in matrixList],cut=0,c='k',label='Original')
   sns.kdeplot([x.shape[1] for x in matrix_rescaled_list],cut=0,c='C1',label='Rescaled')
   sns.rugplot([x.shape[1] for x in matrix_rescaled_list],c='r')
-  plt.xlim([80,300])
+  plt.xlim([70,350])
   plt.legend()
   plt.xlabel('Widths')
   plt.savefig(f'{plot_dir}/KDE_widths_pre_post_height_scaling-{os.getcwd().split(dirSep)[-1]}.pdf',format='pdf',bbox_inches='tight')
@@ -589,7 +589,7 @@ def plot_all_data(data,ax,
       # set y ticks
       y_major = matplotlib.ticker.LogLocator(base = 10.0, numticks = 8)
       g.yaxis.set_major_locator(y_major)
-      g.set_yticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8])
+      g.set_yticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8],labels=[r'$10^{0}$','',r'$10^{2}$','',r'$10^{4}$','',r'$10^{6}$','',r'$10^{8}$'])
       y_minor = matplotlib.ticker.LogLocator(base = 10.0, subs = np.arange(1.0, 10.0) * 0.1, numticks = 10)
       g.yaxis.set_minor_locator(y_minor)
       g.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
@@ -679,13 +679,18 @@ def plotAvgImgOverTime(df_all_rates,labelDf,matrix,
     
     # dictionaries to deal with inputs
     dataTypeDict = {'radiance':0,'mousePixel':1,'brightfield':2}
+
+    # top, bottom, left, right
     regionDict = { 'all':[(  0, -1),( 0,-1)],
-                 'snout':[(  0, 60),(20,165)],
-                 'lungs':[( 60,110),(20,165)],
-                 'liver':[(110,210),(20,165)],
-               'abdomen':[(210,240),(20,165)],
-                  'bmRm':[(240,320),(20,92)], # bone marrow (mouse right)
-                  'bmLm':[(240,320),(93,165)]} # bone marrow (mouse left)
+                 'snout':[(  0, 64),(19,164)],
+                  'neck':[(  64, 86),(19,164)],
+                 'lungs':[( 86,132),(19,164)],
+                 'liver':[(132,212),(19,164)],
+               'abdomen':[(212,234),(19,164)],
+                   'bmR':[(234,305),(19,61)], # bone marrow (mouse right)
+               'bladder':[(234,305),(61,121)],
+                   'bmL':[(234,305),(121,164)], # bone marrow (mouse left)
+                  'feet':[(305,385),(19,164)]} 
     
     
     
@@ -755,19 +760,36 @@ def plotAvgImgOverTime(df_all_rates,labelDf,matrix,
                     else:
                         axs[i-counter].set_title(f'Day {day[1:]}');
                     
-                    if sectionFlag:
-                        snout = mpatches.Rectangle((20,1),145,59, linewidth=2, edgecolor='C0', facecolor='none')
-                        lungs = mpatches.Rectangle((20,60),145,50, linewidth=2, edgecolor='C1', facecolor='none')
-                        liver = mpatches.Rectangle((20,110),145,100, linewidth=2, edgecolor='C2', facecolor='none')
-                        abdomen = mpatches.Rectangle((20,210),145,30, linewidth=2, edgecolor='C3', facecolor='none')
-                        bmL = mpatches.Rectangle((20,240),72,80, linewidth=2, edgecolor='C4', facecolor='none') # bone marrow left
-                        bmR = mpatches.Rectangle((93,240),72,80, linewidth=2, edgecolor='C5', facecolor='none') # bone marrow right
+                    if sectionFlag: # (top, bottom), (left, right) ## (x,y), height, width
+                        snout = mpatches.Rectangle((regionDict['snout'][1][0],regionDict['snout'][0][0]),regionDict['snout'][1][1]-regionDict['snout'][1][0],regionDict['snout'][0][1]-regionDict['snout'][0][0], linewidth=2, edgecolor='green', facecolor='none')
+                        
+                        neck = mpatches.Rectangle((regionDict['neck'][1][0],regionDict['neck'][0][0]),regionDict['neck'][1][1]-regionDict['neck'][1][0],regionDict['neck'][0][1]-regionDict['neck'][0][0], linewidth=2, edgecolor='green', facecolor='none')
+
+                        lungs = mpatches.Rectangle((regionDict['lungs'][1][0],regionDict['lungs'][0][0]),regionDict['lungs'][1][1]-regionDict['lungs'][1][0],regionDict['lungs'][0][1]-regionDict['lungs'][0][0], linewidth=2, edgecolor='green', facecolor='none')
+                        
+                        liver = mpatches.Rectangle((regionDict['liver'][1][0],regionDict['liver'][0][0]),regionDict['liver'][1][1]-regionDict['liver'][1][0],regionDict['liver'][0][1]-regionDict['liver'][0][0], linewidth=2, edgecolor='grey', facecolor='none')
+                        
+                        abdomen = mpatches.Rectangle((regionDict['abdomen'][1][0],regionDict['abdomen'][0][0]),regionDict['abdomen'][1][1]-regionDict['abdomen'][1][0],regionDict['abdomen'][0][1]-regionDict['abdomen'][0][0], linewidth=2, edgecolor='grey', facecolor='none')
+
+                        bmR = mpatches.Rectangle((regionDict['bmR'][1][0],regionDict['bmR'][0][0]),regionDict['bmR'][1][1]-regionDict['bmR'][1][0],regionDict['bmR'][0][1]-regionDict['bmR'][0][0], linewidth=2, edgecolor='purple', facecolor='none') # bone marrow right
+
+                        bladder = mpatches.Rectangle((regionDict['bladder'][1][0],regionDict['bladder'][0][0]),regionDict['bladder'][1][1]-regionDict['bladder'][1][0],regionDict['bladder'][0][1]-regionDict['bladder'][0][0], linewidth=2, edgecolor='purple', facecolor='none')
+
+                        bmL = mpatches.Rectangle((regionDict['bmL'][1][0],regionDict['bmL'][0][0]),regionDict['bmL'][1][1]-regionDict['bmL'][1][0],regionDict['bmL'][0][1]-regionDict['bmL'][0][0], linewidth=2, edgecolor='purple', facecolor='none') # bone marrow left
+
+                        feet = mpatches.Rectangle((regionDict['feet'][1][0],regionDict['feet'][0][0]),regionDict['feet'][1][1]-regionDict['feet'][1][0],regionDict['feet'][0][1]-regionDict['feet'][0][0], linewidth=2, edgecolor='purple', facecolor='none') # bone marrow left
+
+
+                        
                         axs[i-counter].add_patch(snout)
+                        axs[i-counter].add_patch(neck)
                         axs[i-counter].add_patch(lungs)
                         axs[i-counter].add_patch(liver)
                         axs[i-counter].add_patch(abdomen)
-                        axs[i-counter].add_patch(bmL)
                         axs[i-counter].add_patch(bmR)
+                        axs[i-counter].add_patch(bladder)
+                        axs[i-counter].add_patch(bmL)
+                        axs[i-counter].add_patch(feet)
                         
                 else:
                     axs[i-counter].imshow(avgMatrix,cmap=cmap)
@@ -815,6 +837,8 @@ def plotAvgImgOverTime(df_all_rates,labelDf,matrix,
 
 
 
+
+
 def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
   '''
   Generates a summary plot for each mouse.
@@ -852,7 +876,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       for col in range(ncols):
           axs2.append(fig.add_subplot(gs[1,col])) # create new subplot axis on second row for each day -- for image data -- radiance
       axs3 = fig.add_subplot(gs[2, :]) # plot for % of tumor by section
-      axs4 = fig.add_subplot(gs[3:, 0:np.int(np.ceil(ncols/2))]) # axes for summary chart
+      axs4 = fig.add_subplot(gs[3:, 0:int(np.ceil(ncols/2))]) # axes for summary chart
       
       ### axs1 - plot radiance on first row ###
       plot_all_data(data=df_all_rates.query('MouseID == @mouse'),
@@ -887,8 +911,8 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       g=sns.lineplot(data=df_all_regions.reset_index(),x='Time',y='Average Radiance',marker='o',hue='Region',legend=True,ax=axs3);
       g.set_yscale('log')
       g.set_ylim(1,1e8)
-      g.set_xlabel('Days Since CAR-T Cell Administration')
-      g.set_ylabel('Average Radiance per Pixel\n(p/sec/cm$^2$/sr/pixel)');
+      g.set_xlabel('Days Since CAR-T Cell Administration',fontsize=30)
+      g.set_ylabel('Average Radiance per Pixel\n(p/sec/cm$^2$/sr/pixel)',fontsize=30);
       # g.set_xticks(np.arange(0,df.index[-1]+5,5), labels=np.arange(0,df.index[-1]+5,5));
       g.set_xlim(-1, np.max(df_all_regions.reset_index().Time)+1)
       sns.move_legend(g, loc='upper right', bbox_to_anchor=(1, -0.35))
@@ -897,6 +921,15 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       g.axhspan(1e7,1e8,facecolor='#d9dbde',zorder=-1000) # upper limit is 1e7
       # g.text((np.max(df_all_regions.reset_index().Time)-np.min(df.reset_index().Time)-8)/2 , 7,'Below Detection Threshold')
       # g.text((np.max(df_all_regions.reset_index().Time)-np.min(df.reset_index().Time)-8)/2, 2.5e7,'Above Detection Threshold')
+
+      # set y ticks
+      y_major = matplotlib.ticker.LogLocator(base = 10.0, numticks = 8)
+      g.yaxis.set_major_locator(y_major)
+      g.set_yticks([1e0,1e1,1e2,1e3,1e4,1e5,1e6,1e7,1e8],labels=[r'$10^{0}$','',r'$10^{2}$','',r'$10^{4}$','',r'$10^{6}$','',r'$10^{8}$'])
+      y_minor = matplotlib.ticker.LogLocator(base = 10.0, subs = np.arange(1.0, 10.0) * 0.1, numticks = 10)
+      g.yaxis.set_minor_locator(y_minor)
+      g.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+      axs3.tick_params(axis='both', which='both', labelsize=30)
 
       
       ### axs4 - parameter summary table ###
@@ -930,7 +963,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
 
       # make the start days not have a decimal
       start_mask = summary_df['Parameter'].str.contains('Start of')
-      summary_df.loc[start_mask, 'Value'] = summary_df.loc[start_mask, 'Value'].apply(lambda x: np.int(x))
+      summary_df.loc[start_mask, 'Value'] = summary_df.loc[start_mask, 'Value'].apply(lambda x: int(x))
 
       # make table as plot
       render_mpl_table(summary_df,ax=axs4)
@@ -954,7 +987,8 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
           exp = mouse_info.reset_index().ExperimentName.unique()[0]
           group = mouse_info.reset_index().Group.unique()[0]
           sample = mouse_info.reset_index().Sample.unique()[0]
-          plt.suptitle(f'{mouse}: {exp}-{group}-{sample}',y=0.9)   
+          plt.suptitle(f'{mouse}: {exp}-{group}-{sample}',y=0.9,fontsize=30)
+          plt.subplots_adjust(hspace=0.6)
           # save figures
           plt.savefig(f'{plot_dir}/{mouse}: {exp}-{group}-{sample}.pdf',format='pdf',bbox_inches='tight');
           plt.close(); # prevent plot from showing in Jupyter notebook

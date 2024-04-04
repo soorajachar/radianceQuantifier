@@ -9,6 +9,7 @@ from radianceQuantifier.dataprocessing.miscFunctions import setMaxWidth
 from radianceQuantifier.setup.experimentCreationGUI import NewExperimentWindow,NewProjectWindow,RemoveProjectWindow
 from radianceQuantifier.setup.experimentSetupGUI import ExperimentSetupStartPage
 from radianceQuantifier.setup.processExperimentGUI import ProcessExperimentWindow 
+from radianceQuantifier.setup.radianceRegionSelectionGUI import RadianceRegionSelectionWindow 
 from radianceQuantifier.setup.modelExperimentGUI import ModelExperimentWindow 
 from radianceQuantifier.plotting.plottingGUI import PlotExperimentWindow 
 import radianceQuantifier
@@ -22,12 +23,12 @@ else:
 class MainApp(tk.Tk):
     def __init__(self):
         self.root = tk.Tk.__init__(self)
-        self.title('radianceQuantifier '+version('radianceQuantifier'))
+        self.title('maRQup '+version('radianceQuantifier'))
         self._frame = None
         self.homedirectory = dirSep.join(os.path.abspath(radianceQuantifier.__file__).split(dirSep)[:-1])
         if self.homedirectory[-1] != '/':
             self.homedirectory+='/'
-        print('radianceQuantifier location: '+self.homedirectory)
+        print('maRQup location: '+self.homedirectory)
         self.switch_frame(RadianceQuantifierHomePage)
 
     def switch_frame(self, frame_class,*args):
@@ -48,7 +49,7 @@ class RadianceQuantifierHomePage(tk.Frame):
         load = Image.open(master.homedirectory+"radianceQuantifierLogo.png")
         width, height = load.size
         SCALEFACTOR = 0.3
-        load = load.resize((int(SCALEFACTOR*width), int(SCALEFACTOR*height)), Image.ANTIALIAS)
+        load = load.resize((int(SCALEFACTOR*width), int(SCALEFACTOR*height)), Image.LANCZOS)
         render = ImageTk.PhotoImage(load)
         img = tk.Label(mainWindow, image=render)
         img.image = render
@@ -116,21 +117,23 @@ class ExperimentActionWindow(tk.Frame):
         
         l1 = tk.Label(mainWindow,text='Choose an action:')
         v = tk.StringVar(value='plt')
-        rb1a = tk.Radiobutton(mainWindow, text="Setup experiment",padx = 20, variable=v, value='se')
-        rb1b = tk.Radiobutton(mainWindow,text="Process experiment",padx = 20, variable=v, value='pd')
-        rb1c = tk.Radiobutton(mainWindow,text="Model experiment",padx = 20, variable=v, value='mdl')
-        rb1d = tk.Radiobutton(mainWindow,text="Plot experiment",padx = 20, variable=v, value='plt')
+        rb1a = tk.Radiobutton(mainWindow, text="Setup experiment",padx = 20, variable=v, value='set')
+        rb1b = tk.Radiobutton(mainWindow,text="Process experiment",padx = 20, variable=v, value='pro')
+        rb1c = tk.Radiobutton(mainWindow,text="Select new ROIs",padx = 20, variable=v, value='roi')
+        rb1d = tk.Radiobutton(mainWindow,text="Model experiment",padx = 20, variable=v, value='mdl')
+        rb1e = tk.Radiobutton(mainWindow,text="Plot experiment",padx = 20, variable=v, value='plt')
         l1.grid(row=0,column=0)
         rb1a.grid(row=1,column=0,sticky=tk.W)
         rb1b.grid(row=2,column=0,sticky=tk.W)
         rb1c.grid(row=3,column=0,sticky=tk.W)
         rb1d.grid(row=4,column=0,sticky=tk.W)
+        rb1e.grid(row=5,column=0,sticky=tk.W)
         
         def collectInput():
             action = v.get()
-            if action == 'se':
+            if action == 'set':
                 master.switch_frame(ExperimentSetupStartPage,selectedExperiment,ExperimentActionWindow)
-            elif action == 'pd':
+            elif action == 'pro':
                 #answer = tkinter.messagebox.askokcancel(title='Confirmation',message='Do you want to process all image data?',icon=tkinter.messagebox.WARNING)
                 answer=True
                 if answer:
@@ -161,23 +164,21 @@ class ExperimentActionWindow(tk.Frame):
                                     sampleNameFile.iloc[i,j] = sampleNameFile.iloc[i,j].rstrip("0").rstrip(".")
 
                     master.switch_frame(ProcessExperimentWindow,ExperimentActionWindow,selectedExperiment,sampleNameFile,rawImagePath)
-                    #Radiance df
-                    #radianceStatisticDf = fullInVivoImageProcessingPipeline(sampleNameFile,save_pixel_df=True,pathToRawImages=rawImagePath)
-                    #print(radianceStatisticDf)
-                    
-                    #Survival df
-                    #Legacy formatting
-                    #subsetDf = radianceStatisticDf.copy()
-                    #subsetDf = subsetDf.droplevel('Time')
-                    #subsetDf.index.names = [x if x != 'Day' else 'Time' for x in subsetDf.index.names]
-                    #Create ungrouped survival dataframe
-                    #survivalDf = createSurvivalDf(subsetDf,[],selectedExperiment,saveDf=True)
-                    
-                    #tk.messagebox.showinfo(title='Success', message='Experiment processing complete!')
-            elif action == 'plt':
-                master.switch_frame(PlotExperimentWindow,selectedExperiment,ExperimentActionWindow)
+            elif action == 'roi':
+                '''Skip processing steps and select new ROIs from previously processed data.'''
+                # load the data (only need the maxWidth and maxHeight)
+                # the actual df is loaded in the inVivoRadianceProcessing.py/calculate_radiance function
+                experimentName = os.getcwd().split(dirSep)[(-1)]
+                maxWidth = int(open(f'misc/maxWidth-{experimentName}.txt', 'r').read())
+                maxHeight = int(open(f'misc/maxHeight-{experimentName}.txt', 'r').read())
+
+                # open window to chose region for radiance calculation
+                master.switch_frame(RadianceRegionSelectionWindow, ProcessExperimentWindow, ExperimentActionWindow, selectedExperiment, maxWidth, maxHeight)
+
             elif action == 'mdl':
                 master.switch_frame(ModelExperimentWindow,selectedExperiment,ExperimentActionWindow)
+            elif action == 'plt':
+                master.switch_frame(PlotExperimentWindow,selectedExperiment,ExperimentActionWindow)
 
         def backCommand():
             os.chdir(master.homedirectory)

@@ -10,8 +10,7 @@ import cv2
 import pickle5 as pickle
 from tqdm.auto import tqdm
 from sklearn.metrics import r2_score
-from lmfit import Model, Minimizer, Parameters, report_fit, minimize
-
+from lmfit import Model, Minimizer, Parameters, fit_report, minimize
 if os.name == 'nt':
     dirSep = '\\'
 else:
@@ -305,11 +304,11 @@ def objective_growth(params, t, data, alpha, phase):
   '''
   # Bayesian Priors
   if phase=='growth':
-    k_bayes = 0.76
-    sigma = 0.45
+    k_bayes = 0.83
+    sigma = 0.42
   if phase=='relapse':
-    k_bayes = 0.85
-    sigma = 0.96
+    k_bayes = 0.60
+    sigma = 0.32
   return np.sum((np.log10(data) - np.log10(tumor_growth(params, t)))**2) + alpha*np.sum(((params['growth']-k_bayes)**2)/(sigma**2))
 
 
@@ -577,7 +576,7 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
   # combine all the data together
   mice_fit_df = pd.concat(mice_df_list)
-  index_names2 = ['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','GrowthRate','DecayRate','RelapseRate','Decay2Rate','Relapse2Rate','StartGrowth','StartDecay','StartRelapse','StartDecay2','StartRelapse2','Phase','Rate','R2','Day','Time','Sample','MouseID']
+  index_names2 = ['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','GrowthRate','DecayRate','RelapseRate','Decay2Rate','Relapse2Rate','StartGrowth','StartDecay','StartRelapse','StartDecay2','StartRelapse2','Phase','Rate','R2','Day','Time','Sample','MouseID','Group','ImageID']
   mice_fit_df = mice_fit_df.set_index(index_names2)
 
   return mice_fit_df
@@ -627,7 +626,7 @@ def get_rates(mice_fit_df,include_outliers=False):
   return growth_rates, decay_rates, relapse_rates
 
 
-def add_rates_to_df(data):
+def add_rates_to_df_old(data):
   '''
   Function to add information on rates (p, p-d, p-d', p', d, d', d2, p2') to dataframe.
   '''
@@ -700,3 +699,133 @@ def add_rates_to_df(data):
 
   return df_all_rates
 
+def find_carrying_capacity(radiance_vals):
+    '''
+    Function to find the carrying capacity from the radiance values for one mouse.
+    '''
+    if (len(radiance_vals)>1) and (np.abs(np.log10(radiance_vals[-1]) - np.log10(radiance_vals[-2])) < 1):
+        C0 = (radiance_vals[-1] + radiance_vals[-2]) / 2 # use average of last two vals as C0
+    elif np.max(radiance_vals) > 1e7:
+        C0 = np.max(radiance_vals) # use max if greater than 1e7
+    else:
+        C0 = 1e7 # hardcoded based on values for all mice -- all are about 1e7 with little variability
+    
+    return C0
+
+def find_tumor_baseline(radiance_vals):
+    '''
+    Function to find the tumor baseline value from the radiance values for one mouse.
+    '''
+    # if (len(radiance_vals)>1) and (np.abs(np.log10(radiance_vals[-1]) - np.log10(radiance_vals[-2])) < 1):
+    #     T_baseline = (radiance_vals[-1] + radiance_vals[-2]) / 2 # use average of last two vals as baseline
+    # else:
+    T_baseline = radiance_vals[-1] # use value at last point
+    
+    return T_baseline
+
+
+def add_rates_to_df(df):
+  '''
+  Function to add the carrying capacity, tumor baseline, and initial tumor to the dataframe.
+  '''
+
+  df_list = []
+  for mouse in tqdm(df.reset_index().MouseID.unique()):
+      mouse_df = df.query('MouseID==@mouse')
+      phases = mouse_df.reset_index().Phase.unique()
+      
+      # get carrying capacity from growth phase
+      if 'Growth' in phases:
+          radiance_vals = mouse_df.query('Phase=="Growth"')['Average Radiance'].values
+          C0 = find_carrying_capacity(radiance_vals)
+          mouse_df['Tinf_Growth'] = C0
+      
+      # get carrying capacity from relapse phase
+      if 'Relapse' in phases:
+          radiance_vals = mouse_df.query('Phase=="Relapse"')['Average Radiance'].values
+          C0 = find_carrying_capacity(radiance_vals)
+          mouse_df['Tinf_Relapse'] = C0
+          
+      # get tumor baseline from decay phase
+      if 'Decay' in phases:
+          radiance_vals = mouse_df.query('Phase=="Decay"')['Average Radiance'].values
+          T_baseline = find_tumor_baseline(radiance_vals)
+          mouse_df['Tb'] = T_baseline
+      
+      # add initial tumor
+      mouse_df['T0'] = mouse_df['Average Radiance'].values[0]
+      
+      # add category label to all data
+      mouse_df['Categories'] = ' + '.join([item for item in phases if 'Decay2' not in item and 'Relapse2' not in item])
+
+      # merge
+      df_list.append(mouse_df)
+
+  new_df_without_p = pd.concat(df_list)
+
+  # now need to add back the initial growth of the tumor for the no CAR condition
+  exps = new_df_without_p.reset_index().ExperimentName.unique()
+  exp_df_list = []
+  for i,exp in enumerate(exps):
+    exp_df = new_df_without_p.query('ExperimentName == @exp')
+    p = np.mean(exp_df.query('CAR_Binding == "Mock" or CAR_Binding == "None"').reset_index().GrowthRate.unique()) # p --> growth rate without CAR
+    exp_df['ControlGrowthRate'] = p
+    exp_df_list.append(exp_df)
+
+  new_df = pd.concat(exp_df_list)
+  
+  return new_df
+
+
+def generate_final_params_df(df):
+  '''
+  Returns df with one row per mouse. Columns are the 9 parameters for the model. (Two carrying capacities: one for growth and one for relapse)
+  '''
+  new_df = add_rates_to_df(df)
+  final_params_df = new_df.reset_index().drop(['Day','Time','Phase','Rate','R2','Sample','ImageID','Average Radiance','Total Radiance','Average Radiance Prediction','StartGrowth','StartDecay2','StartRelapse2','Decay2Rate','Relapse2Rate'],axis=1).drop_duplicates()
+  final_params_df = final_params_df.set_index(['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','Categories','Group','MouseID']).sort_values(by='MouseID')
+  return final_params_df
+
+def count_mice_by_phase_type(data):
+  '''
+  Count number of mice in five different tumor behavor groups.
+
+  cat1 -- mice with phases 1. Growth
+  cat2 -- mice with phases 2. Growth + Decay
+  cat3 -- mice with phases 3. Growth + Decay + Relapse
+  cat4 -- mice with phases 6. Decay
+  cat5 -- mice with phases 7. Decay + Relapse
+
+  Output:
+  cat_df -- dataframe with number of mice in each phase
+  cat_dict -- dictionary with MouseIDs in each phase
+  '''
+
+  cat1 = data.query('Categories=="Growth"').reset_index().MouseID.unique()
+  cat2 = data.query('Categories=="Growth + Decay"').reset_index().MouseID.unique()
+  cat3 = data.query('Categories=="Growth + Decay + Relapse"').reset_index().MouseID.unique()
+  cat4 = data.query('Categories=="Decay"').reset_index().MouseID.unique()
+  cat5 = data.query('Categories=="Decay + Relapse"').reset_index().MouseID.unique()
+ 
+
+  # set up df
+  cat_df = pd.DataFrame(data=[len(cat1),len(cat2),len(cat3),len(cat4),len(cat5)],
+                        index=['Growth',
+                               'Growth + Decay',
+                               'Growth + Decay + Relapse',
+                               'Decay',
+                               'Decay + Relapse'],
+                        columns=['Number'])
+  
+  cat_df['Percent'] = np.round((cat_df['Number']/len(data.reset_index().MouseID.unique()))*100,2)
+
+
+  # set up dictionary
+  cat_dict = {'Growth':cat1,
+             'Growth + Decay':cat2,
+             'Growth + Decay + Relapse':cat3,
+             'Decay':cat4,
+             'Decay + Relapse':cat5}
+
+
+  return cat_df, cat_dict

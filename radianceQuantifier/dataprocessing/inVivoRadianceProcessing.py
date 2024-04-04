@@ -1008,6 +1008,9 @@ def fullInVivoImageProcessingPipeline_part2(radianceStatisticDf,save_df=True):
     processed_df.to_pickle(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.pkl')
     processed_df.to_excel(outputDir+'radianceStatisticPickleFile_processed-'+experimentName+'.xlsx')
 
+    np.savetxt(f'misc/maxWidth-{experimentName}.txt',[maxWidth],fmt='%d')
+    np.savetxt(f'misc/maxHeight-{experimentName}.txt',[maxHeight],fmt='%d')
+
   return processed_df, maxWidth, maxHeight
 
 
@@ -1229,71 +1232,74 @@ def add_metadata_to_images(expList_npz, merged_data, labelDf_newtime):
   col_names = ['Group','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation']
   drop_cols = ['Average Pixel Intensity','Average Radiance','Total Radiance','Tumor Fraction','Day','Time','Date','ExperimentName','Researcher']
   fullExpDf_list=[]
-  # print(expList_npz,good_exp_list)
+#   print(expList_npz,good_exp_list)
   for exp_name in expList_npz: # expList_npz same as expList_minScale
-      if exp_name in merged_data.reset_index().ExperimentName.unique(): # only merge files with data in original master dataframe
-          if exp_name in good_exp_list:
-              try:
-                  # get metadata for each group
-                  exp_df_raw = merged_data.query('ExperimentName == @exp_name')
-                  exp_df = exp_df_raw.reset_index().set_index(col_names).drop(drop_cols,axis=1).drop_duplicates()
-                  group_data_list = list(exp_df.index.unique())
+      if exp_name in good_exp_list: # only merge files with data in original master dataframe
+        try:
+            # get metadata for each group
+            exp_df_raw = merged_data.query('ExperimentName == @exp_name')
+            exp_df = exp_df_raw.reset_index().set_index(col_names).drop(drop_cols,axis=1).drop_duplicates()
+            group_data_list = list(exp_df.index.unique())
 
-                  labelDf_exp = labelDf_newtime.query('Experiment == @exp_name')
-                  idx=list(labelDf_newtime.index.names)
+            labelDf_exp = labelDf_newtime.query('Experiment == @exp_name')
+            idx=list(labelDf_newtime.index.names)
 
-                  # get group names
-                  group_names = labelDf_exp.reset_index().Group.unique()
+            # get group names
+            group_names = labelDf_exp.reset_index().Group.unique()
 
-                  # print(exp_name,len(group_data_list),len(group_names),exp_df_raw.shape[0],labelDf_exp.shape[0])
-                  # print(group_names)
+            # print(exp_name,len(group_data_list),len(group_names),exp_df_raw.shape[0],labelDf_exp.shape[0])
+            # print(group_names)
 
-                  # add metadata to labelDf
-                  group_df_list=[]
-                  for i,group_name in enumerate(group_names): # for each group name
-                      # group_df = labelDf.query('Experiment == @exp_name and Group == @group_name') # df for each group in each experiment
-                      group_df = labelDf_exp.query('Group == @group_name') # df for each group in each experiment
-                      # print(i,group_name,group_df.shape[0])
-                      # combine/renumber groups to match order of corresponding data in group_data_list
+            # add metadata to labelDf
+            group_df_list=[]
+            for i,group_name in enumerate(group_names): # for each group name
+                # group_df = labelDf.query('Experiment == @exp_name and Group == @group_name') # df for each group in each experiment
+                group_df = labelDf_exp.query('Group == @group_name') # df for each group in each experiment
+                # print(i,group_name,group_df.shape[0])
+                # combine/renumber groups to match order of corresponding data in group_data_list
 
-                      #print(col_names)
-                      for j,col in enumerate(col_names): # for each metadata type
-                          # print(group_name,i,group_data_list[i])
-                          if col != 'Group':
-                            group_df[col] = group_data_list[i][j] # add new column (j) with metadata for corresponding group (i)
-                      group_df_list.append(group_df)
-                  labelExpDf = pd.concat(group_df_list) # combine the group dfs with the new metadata
+                #print(col_names)
+                for j,col in enumerate(col_names): # for each metadata type
+                    # print(group_name,i,group_data_list[i])
+                    if col != 'Group':
+                      group_df[col] = group_data_list[i][j] # add new column (j) with metadata for corresponding group (i)
+                group_df_list.append(group_df)
+            labelExpDf = pd.concat(group_df_list) # combine the group dfs with the new metadata
 
-                  ##### DEBUGGING ONLY #######
-                  # labelExpDf.to_pickle(f'/Users/kenetal/Desktop/labelExpDf.pkl')
-                  # exp_df_raw.to_pickle(f'/Users/kenetal/Desktop/exp_df_raw.pkl')
-                  ##### DEBUGGING ONLY #######
+            ##### DEBUGGING ONLY #######
+            # labelExpDf.to_pickle(f'/Users/kenetal/Desktop/labelExpDf.pkl')
+            # exp_df_raw.to_pickle(f'/Users/kenetal/Desktop/exp_df_raw.pkl')
+            ##### DEBUGGING ONLY #######
 
-                  # sort before merging
-                  labelExpDf.sort_values(by=['Day','Mouse','Tumor','TCellNumber','Perturbation'],axis=0, inplace=True)
-                  exp_df_raw.sort_values(by=['Day','Sample','Tumor','TCellNumber','Perturbation'],axis=0, inplace=True)
+            # sort before merging
+            labelExpDf.sort_values(by=['Day','Mouse','Tumor','TCellNumber','Perturbation'],axis=0, inplace=True)
+            exp_df_raw.sort_values(by=['Day','Sample','Tumor','TCellNumber','Perturbation'],axis=0, inplace=True)
 
-                  # add new metadata to old info
-                  if (np.sum(labelExpDf.reset_index().Mouse != exp_df_raw.reset_index().Sample) + 
-                      np.sum(labelExpDf.reset_index().Day != exp_df_raw.reset_index().Day) +
-                      np.sum(labelExpDf.reset_index().CAR_Binding != exp_df_raw.reset_index().CAR_Binding) +
-                      np.sum(labelExpDf.reset_index().CAR_Costimulatory != exp_df_raw.reset_index().CAR_Costimulatory) +
-                      np.sum(labelExpDf.reset_index().Tumor != exp_df_raw.reset_index().Tumor) +
-                      np.sum(labelExpDf.reset_index().TumorCellNumber != exp_df_raw.reset_index().TumorCellNumber) + 
-                      np.sum(labelExpDf.reset_index().TCellNumber != exp_df_raw.reset_index().TCellNumber) + 
-                      np.sum(labelExpDf.reset_index().bloodDonorID != exp_df_raw.reset_index().bloodDonorID) + 
-                      np.sum(labelExpDf.reset_index().Perturbation != exp_df_raw.reset_index().Perturbation)
-                    ) == 0: # double check that correctly lined up for merging
-                      fullExpDf = pd.concat([labelExpDf.reset_index().rename(columns={'Index':'ImageID'}).drop(['Experiment','Mouse'],axis=1), # new
-                                            exp_df_raw.reset_index().drop(['Group','CAR_Binding','CAR_Costimulatory', 'Tumor', 'TumorCellNumber', 'TCellNumber','bloodDonorID', 'Perturbation', 'Day'],axis=1)], # old
-                                            axis=1)#.set_index(col_names)                                
-                      fullExpDf_list.append(fullExpDf)
-                  else:
-                      print('ERROR: INFO FROM LABELDF DOES NOT MATCH WITH INFO FROM ORIGINAL MATRIX DATA')
-                      raise Exception('ERROR: INFO FROM LABELDF DOES NOT MATCH WITH INFO FROM ORIGINAL MATRIX DATA')
-              
-              except:
-                  print(exp_name)
+            # add new metadata to old info
+            if (np.sum(labelExpDf.reset_index().Mouse != exp_df_raw.reset_index().Sample) + 
+                np.sum(labelExpDf.reset_index().Day != exp_df_raw.reset_index().Day) +
+                np.sum(labelExpDf.reset_index().CAR_Binding != exp_df_raw.reset_index().CAR_Binding) +
+                np.sum(labelExpDf.reset_index().CAR_Costimulatory != exp_df_raw.reset_index().CAR_Costimulatory) +
+                np.sum(labelExpDf.reset_index().Tumor != exp_df_raw.reset_index().Tumor) +
+                np.sum(labelExpDf.reset_index().TumorCellNumber != exp_df_raw.reset_index().TumorCellNumber) + 
+                np.sum(labelExpDf.reset_index().TCellNumber != exp_df_raw.reset_index().TCellNumber) + 
+                np.sum(labelExpDf.reset_index().bloodDonorID != exp_df_raw.reset_index().bloodDonorID) + 
+                np.sum(labelExpDf.reset_index().Perturbation != exp_df_raw.reset_index().Perturbation)
+            ) == 0: # double check that correctly lined up for merging
+                fullExpDf = pd.concat([labelExpDf.reset_index().rename(columns={'Index':'ImageID'}).drop(['Experiment','Mouse'],axis=1), # new
+                                    exp_df_raw.reset_index().drop(['Group','CAR_Binding','CAR_Costimulatory', 'Tumor', 'TumorCellNumber', 'TCellNumber','bloodDonorID', 'Perturbation', 'Day'],axis=1)], # old
+                                    axis=1)#.set_index(col_names)                                
+                fullExpDf_list.append(fullExpDf)
+            else:
+                print('ERROR: INFO FROM LABELDF DOES NOT MATCH WITH INFO FROM ORIGINAL MATRIX DATA')
+                raise Exception('ERROR: INFO FROM LABELDF DOES NOT MATCH WITH INFO FROM ORIGINAL MATRIX DATA')
+        
+        except:
+            print(exp_name)
+
+      else: # make sure name of experiment in file matches name of experiment as GUI input
+        print(f'ERROR: Experiment name in sampleNameFile.xlsx ("{good_exp_list[0]}") does not match experiment name in folder ("{exp_name}").')
+        raise Exception(f'ERROR: Experiment name in sampleNameFile.xlsx ("{good_exp_list[0]}") does not match experiment name in folder ("{exp_name}").')
 
   labelDf_all = pd.concat(fullExpDf_list).set_index(['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','Group','Day','Time','Sample','MouseID','ImageID']).drop(['index'],axis=1,errors='ignore') # sometimes "index" appears as column -- drop it
 

@@ -12,7 +12,7 @@ else:
     dirSep = '/'
 
 class ProcessExperimentWindow(tk.Frame):
-    def __init__(self, master, backPage,selectedExperiment, sampleNameFile,pathToRawImages):
+    def __init__(self, master, backPage, selectedExperiment, sampleNameFile,pathToRawImages):
         tk.Frame.__init__(self, master)
         mainWindow = tk.Frame(self)
         mainWindow.pack(side=tk.TOP,padx=10)
