@@ -864,19 +864,20 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
   mice = np.sort((df_all_rates.reset_index().MouseID.unique()))
   for mouse in tqdm(mice,disable=False):
       # set up axes for plots
-      ncols = df_all_rates.query('MouseID == @mouse').shape[0]
-      nrows=5
+      ncols_days = df_all_rates.query('MouseID == @mouse').shape[0]
+      ncols = ncols_days * 2
+      nrows=4
       fig = plt.figure(figsize=(np.max([15,20*(ncols/6)]), 5*nrows),layout='constrained',linewidth=25, edgecolor='white')
       plt.subplots_adjust(hspace=0.35)  # add whitespace between subplots in y direction
 
       gs = GridSpec(nrows, ncols, figure=fig)
 
-      axs1 = fig.add_subplot(gs[0, :]) # row 1 axes # create new subplot axis on first row -- radiance values plots
+      axs1 = fig.add_subplot(gs[0, 0:ncols_days]) # row 1 axes # create new subplot axis on first row -- radiance values plots
       axs2 = [] # row 2 axes # radiance images
-      for col in range(ncols):
+      for col in range(ncols_days):
           axs2.append(fig.add_subplot(gs[1,col])) # create new subplot axis on second row for each day -- for image data -- radiance
-      axs3 = fig.add_subplot(gs[2, :]) # plot for % of tumor by section
-      axs4 = fig.add_subplot(gs[3:, 0:int(np.ceil(ncols/2))]) # axes for summary chart
+      axs3 = fig.add_subplot(gs[2, 0:ncols_days]) # plot for % of tumor by section
+      axs4 = fig.add_subplot(gs[0:3, ncols_days:ncols]) # axes for summary chart
       
       ### axs1 - plot radiance on first row ###
       plot_all_data(data=df_all_rates.query('MouseID == @mouse'),
@@ -897,7 +898,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       for region_long in regions2choose: # loop through all regions and load in the dataframe
         region_short = "_".join(region_long.split("_")[4:]) # get region name
         if region_short != 'all': # don't include full "all" region
-          region_df = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/BayesianPriors/{os.getcwd().split(dirSep)[-1]}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl')
+          region_df = loadPickle(f'outputData/ROI Radiance Calculation/{region_long}/NoBayesianPriors/{os.getcwd().split(dirSep)[-1]}_fit2model_all_alphas_0_0_0_0_0_{region_long}.pkl')
           region_df = region_df.query('MouseID == @mouse') # only get info for individual mouse
           region_df['Region'] = region_short
           region_df_list.append(region_df)
@@ -915,7 +916,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
       g.set_ylabel('Average Radiance per Pixel\n(p/sec/cm$^2$/sr/pixel)',fontsize=30);
       # g.set_xticks(np.arange(0,df.index[-1]+5,5), labels=np.arange(0,df.index[-1]+5,5));
       g.set_xlim(-1, np.max(df_all_regions.reset_index().Time)+1)
-      sns.move_legend(g, loc='upper right', bbox_to_anchor=(1, -0.35))
+      sns.move_legend(g, loc='upper left', bbox_to_anchor=(1, 0.7))
       # add marking for lower/upper detection limits
       g.axhspan(1,100,facecolor='#d9dbde',zorder=-1000) # lower limit is 10
       g.axhspan(1e7,1e8,facecolor='#d9dbde',zorder=-1000) # upper limit is 1e7
@@ -971,7 +972,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
     
       
       ## plotting set up and saving ##
-      
+       
       # if have different colorbars across days
       vmin_arr = labelDf.query('MouseID==@mouse').vmin.values
       vmax_arr = labelDf.query('MouseID==@mouse').vmax.values
@@ -987,8 +988,8 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
           exp = mouse_info.reset_index().ExperimentName.unique()[0]
           group = mouse_info.reset_index().Group.unique()[0]
           sample = mouse_info.reset_index().Sample.unique()[0]
-          plt.suptitle(f'{mouse}: {exp}-{group}-{sample}',y=0.9,fontsize=30)
-          plt.subplots_adjust(hspace=0.6)
+          plt.suptitle(f'{mouse}: {exp}-{group}-{sample}',y=1.05,fontsize=30)
+          plt.subplots_adjust(hspace=0.6, wspace=0.6)
           # save figures
           plt.savefig(f'{plot_dir}/{mouse}: {exp}-{group}-{sample}.pdf',format='pdf',bbox_inches='tight');
           plt.close(); # prevent plot from showing in Jupyter notebook
@@ -996,7 +997,7 @@ def plot_individual_summary_sheet(df_all_rates, labelDf, matrix, plot_dir):
           # get info on mouse where got error
           exp = df_all_rates.query('MouseID == @mouse').reset_index().ExperimentName.unique()[0]
           sample = df_all_rates.query('MouseID == @mouse').reset_index().Sample.unique()[0]
-          plt.suptitle(f'{mouse}: {exp}-??-{sample}',y=0.9)   
+          plt.suptitle(f'{mouse}: {exp}-??-{sample}',y=1.05,fontsize=30)   
           # save figures
           plt.savefig(f'{plot_dir}/{mouse}: {exp}-??-{sample}.pdf',format='pdf',bbox_inches='tight');
           plt.close(); # prevent plot from showing in Jupyter notebook

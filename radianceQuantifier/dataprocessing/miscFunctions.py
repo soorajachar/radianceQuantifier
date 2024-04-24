@@ -428,7 +428,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
         print()
 
 
-def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=14,
+def render_mpl_table(data, col_width=3.0, row_height=0.625, font_size=26,
                      header_color='#40466e', row_colors=['#f1f1f2', 'w'], edge_color='w',
                      bbox=[0, 0, 1, 1], header_columns=0,
                      ax=None, **kwargs):
