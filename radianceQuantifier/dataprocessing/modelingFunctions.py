@@ -364,6 +364,11 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
     mouse_df['R2'] = np.nan
     mouse_df = mouse_df.reset_index()
 
+    # skip mouse if it doesn't have any tumor for any timepoints
+    if np.mean(mouse_df['Average Radiance']) < 175:
+      print(f'Skipping mouse {mouse} (No tumor detected at any timepoints.)')
+      continue
+
     # filter by phase
     phase1_df = mouse_df[mouse_df['Phase']=='Growth']
     phase2_df = mouse_df[mouse_df['Phase']=='Decay']
