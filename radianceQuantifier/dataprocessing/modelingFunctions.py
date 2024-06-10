@@ -304,12 +304,17 @@ def objective_growth(params, t, data, alpha, phase):
   '''
   # Bayesian Priors
   if phase=='growth':
-    k_bayes = 0.83
-    sigma = 0.42
+    k_bayes = 0.84
+    sigma = 0.43
   if phase=='relapse':
     k_bayes = 0.60
     sigma = 0.32
-  return np.sum((np.log10(data) - np.log10(tumor_growth(params, t)))**2) + alpha*np.sum(((params['growth']-k_bayes)**2)/(sigma**2))
+
+  model = tumor_growth(params, t.values)
+  residual = np.log10(data) - np.log10(model)
+  bayes = ((params['growth']-k_bayes)**2)/(sigma**2)
+  
+  return np.append(residual,alpha*np.sqrt(bayes))
 
 
 def tumor_killing(params, t):
@@ -334,9 +339,14 @@ def objective_killing(params, t, data, alpha):
   Objective function to be minimized.
   '''
   # Bayesian Priors
-  k_bayes = 4.15
-  sigma = 5.43
-  return np.sum((np.log10(data) - np.log10(tumor_killing(params, t)))**2) + alpha*np.sum(((params['decay']-k_bayes)**2)/(sigma**2))
+  k_bayes = 3.36
+  sigma = 3.79
+  
+  model = tumor_killing(params, t.values)
+  residual = np.log10(data) - np.log10(model)
+  bayes = ((params['decay']-k_bayes)**2)/(sigma**2)
+  
+  return np.append(residual,alpha*np.sqrt(bayes))
 
 
 def fit_data(data,alphas=[0.01,0,0,0,0]):
@@ -359,15 +369,13 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
     # set up default values to be overwritten after fitting
     rate_list=[np.nan,np.nan,np.nan,np.nan,np.nan]
+    stderr_list=[np.nan,np.nan,np.nan,np.nan,np.nan]
     start_list=[-np.inf,np.inf,np.inf,np.inf,np.inf] # dummy vals for start of each phase
     mouse_df['Rate'] = np.nan
     mouse_df['R2'] = np.nan
+    mouse_df['Average Radiance Prediction (Max)'] = np.nan
+    mouse_df['Average Radiance Prediction (Min)'] = np.nan
     mouse_df = mouse_df.reset_index()
-
-    # skip mouse if it doesn't have any tumor for any timepoints
-    if np.mean(mouse_df['Average Radiance']) < 175:
-      print(f'Skipping mouse {mouse} (No tumor detected at any timepoints.)')
-      continue
 
     # filter by phase
     phase1_df = mouse_df[mouse_df['Phase']=='Growth']
@@ -376,12 +384,23 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
     phase4_df = mouse_df[mouse_df['Phase']=='Decay2']
     phase5_df = mouse_df[mouse_df['Phase']=='Relapse2']
 
+    # handle cases if mouse doesn't have any tumor for any timepoints
+    if np.mean(mouse_df['Average Radiance']) <= 100:
+      print(f'No tumor detected at any timepoints for mouse {mouse}.')
+      phase1_df['Rate'] = np.nan
+      phase1_df['stderr'] = np.nan
+      phase1_df['Average Radiance Prediction (Max)'] = np.nan
+      phase1_df['Average Radiance Prediction (Min)'] = np.nan
+      phase1_df['Average Radiance Prediction'] = np.nan
+      phase1_df['R2'] = np.nan
+      continue
+
     # 1. fit initial growth phase
     if len(phase1_df) >= 2:
       # create set of Parameters
       Ti, C0, t, ti = get_params(phase1_df.reset_index().set_index(index_names), phase='Growth')
       params = Parameters()
-      params.add('growth', value=1, min=0.0, vary=True) # , max=2.0
+      params.add('growth', value=1, min=0.0, max=5.0, vary=True)
       params.add('carrying_capacity', value=C0, vary=False)
       params.add('initial_time', value=ti, vary=False)
       params.add('initial_tumor', value=Ti, vary=False)
@@ -391,15 +410,30 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
       # fit the data
       fit = minimize(objective_growth, params, args=(t, yexp, alphas[0], 'growth'))
+      # print(mouse, len(phase1_df), fit_report(fit.params))
 
       # get optimal parameter values
       tg = fit.params['growth'].value
+      stderr = fit.params['growth'].stderr
+      if stderr==None: stderr=np.nan
       phase1_df['Rate'] = tg
+      phase1_df['stderr'] = stderr
       rate_list[0] = tg
+      stderr_list[0] = stderr
       start_list[0] = list(t)[0] # start of growth phase
-      params.add('growth', value=tg, vary=False)
+
+      # MAX predicted values for each timepoint
+      params.add('growth', value=tg+stderr, vary=False)
+      ypred_max = tumor_growth(params, t).values
+      phase1_df['Average Radiance Prediction (Max)'] = ypred_max
+
+      # MIN predicted values for each timepoint
+      params.add('growth', value=tg-stderr, vary=False)
+      ypred_min = tumor_growth(params, t).values
+      phase1_df['Average Radiance Prediction (Min)'] = ypred_min
 
       # predicted values for each timepoint
+      params.add('growth', value=tg, vary=False)
       ypred = tumor_growth(params, t).values
       phase1_df['Average Radiance Prediction'] = ypred
 
@@ -435,16 +469,45 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
       # get optimal parameter values
       tk = fit.params['decay'].value
+      stderr = fit.params['decay'].stderr
+      if stderr==None: stderr=np.nan
       phase2_df['Rate'] = tk
+      phase2_df['stderr'] = stderr
       rate_list[1] = tk
+      stderr_list[1] = stderr
       start_list[1] = list(t)[0] # start of decay phase
       params.add('decay', value=tk, vary=False)
 
       # predicted values for each timepoint
       if extra:
+        # MAX predicted values for each timepoint
+        params.add('decay', value=tk-stderr, vary=False)
+        ypred_max = tumor_killing(params, t[1:]).values
+        phase2_df['Average Radiance Prediction (Max)'] = ypred_max
+
+        # MIN predicted values for each timepoint
+        params.add('decay', value=tk+stderr, vary=False)
+        ypred_min = tumor_killing(params, t[1:]).values
+        phase2_df['Average Radiance Prediction (Min)'] = ypred_min
+        
+        # predicted values for each timepoint
+        params.add('decay', value=tk, vary=False)
         ypred = tumor_killing(params, t[1:]).values
         phase2_df['Average Radiance Prediction'] = ypred
+
       else:
+        # MAX predicted values for each timepoint
+        params.add('decay', value=tk+stderr, vary=False)
+        ypred_max = tumor_killing(params, t).values
+        phase2_df['Average Radiance Prediction (Max)'] = ypred_max
+
+        # MIN predicted values for each timepoint
+        params.add('decay', value=tk-stderr, vary=False)
+        ypred_min = tumor_killing(params, t).values
+        phase2_df['Average Radiance Prediction (Min)'] = ypred_min
+        
+        # predicted values for each timepoint
+        params.add('decay', value=tk, vary=False)
         ypred = tumor_killing(params, t).values
         phase2_df['Average Radiance Prediction'] = ypred
 
@@ -480,12 +543,26 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
       # get optimal parameter values
       tg = fit.params['growth'].value
+      stderr = fit.params['growth'].stderr
+      if stderr==None: stderr=np.nan
       phase3_df['Rate'] = tg
+      phase3_df['stderr'] = stderr
       rate_list[2] = tg
+      stderr_list[2] = stderr
       start_list[2] = list(t)[0] # start of relapse phase
-      params.add('growth', value=tg, vary=False)
+
+      # MAX predicted values for each timepoint
+      params.add('growth', value=tg+stderr, vary=False)
+      ypred_max = tumor_growth(params, t[1:]).values
+      phase3_df['Average Radiance Prediction (Max)'] = ypred_max
+
+      # MIN predicted values for each timepoint
+      params.add('growth', value=tg-stderr, vary=False)
+      ypred_min = tumor_growth(params, t[1:]).values
+      phase3_df['Average Radiance Prediction (Min)'] = ypred_min
 
       # predicted values for each timepoint
+      params.add('growth', value=tg, vary=False)
       ypred = tumor_growth(params, t[1:]).values
       phase3_df['Average Radiance Prediction'] = ypred
 
@@ -517,12 +594,26 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
       # get optimal parameter values
       tk = fit.params['decay'].value
+      stderr = fit.params['decay'].stderr
+      if stderr==None: stderr=np.nan
       phase4_df['Rate'] = tk
+      phase4_df['stderr'] = stderr
       rate_list[3] = tk
+      stderr_list[3] = stderr
       start_list[3] = list(t)[0] # start of decay phase
-      params.add('decay', value=tk, vary=False)
 
+      # MAX predicted values for each timepoint
+      params.add('decay', value=tk-stderr, vary=False)
+      ypred_max = tumor_killing(params, t[1:]).values
+      phase4_df['Average Radiance Prediction (Max)'] = ypred_max
+
+      # MIN predicted values for each timepoint
+      params.add('decay', value=tk+stderr, vary=False)
+      ypred_min = tumor_killing(params, t[1:]).values
+      phase4_df['Average Radiance Prediction (Min)'] = ypred_min
+      
       # predicted values for each timepoint
+      params.add('decay', value=tk, vary=False)
       ypred = tumor_killing(params, t[1:]).values
       phase4_df['Average Radiance Prediction'] = ypred
 
@@ -551,12 +642,26 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
       # get optimal parameter values
       tg = fit.params['growth'].value
+      stderr = fit.params['growth'].stderr
+      if stderr==None: stderr=np.nan
       phase5_df['Rate'] = tg
+      phase5_df['stderr'] = stderr
       rate_list[4] = tg
+      stderr_list[4] = stderr
       start_list[4] = list(t)[0] # start of relapse phase
-      params.add('growth', value=tg, vary=False)
+      
+      # MAX predicted values for each timepoint
+      params.add('growth', value=tg+stderr, vary=False)
+      ypred_max = tumor_growth(params, t[1:]).values
+      phase5_df['Average Radiance Prediction (Max)'] = ypred_max
+
+      # MIN predicted values for each timepoint
+      params.add('growth', value=tg-stderr, vary=False)
+      ypred_min = tumor_growth(params, t[1:]).values
+      phase5_df['Average Radiance Prediction (Min)'] = ypred_min
 
       # predicted values for each timepoint
+      params.add('growth', value=tg, vary=False)
       ypred = tumor_growth(params, t[1:]).values
       phase5_df['Average Radiance Prediction'] = ypred
 
@@ -581,7 +686,7 @@ def fit_data(data,alphas=[0.01,0,0,0,0]):
 
   # combine all the data together
   mice_fit_df = pd.concat(mice_df_list)
-  index_names2 = ['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','GrowthRate','DecayRate','RelapseRate','Decay2Rate','Relapse2Rate','StartGrowth','StartDecay','StartRelapse','StartDecay2','StartRelapse2','Phase','Rate','R2','Day','Time','Sample','MouseID','Group','ImageID']
+  index_names2 = ['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','GrowthRate','DecayRate','RelapseRate','Decay2Rate','Relapse2Rate','StartGrowth','StartDecay','StartRelapse','StartDecay2','StartRelapse2','Phase','Rate','stderr','R2','Day','Time','Sample','MouseID','Group','ImageID']
   mice_fit_df = mice_fit_df.set_index(index_names2)
 
   return mice_fit_df
@@ -787,7 +892,7 @@ def generate_final_params_df(df):
   Returns df with one row per mouse. Columns are the 9 parameters for the model. (Two carrying capacities: one for growth and one for relapse)
   '''
   new_df = add_rates_to_df(df)
-  final_params_df = new_df.reset_index().drop(['Day','Time','Phase','Rate','R2','Sample','ImageID','Average Radiance','Total Radiance','Average Radiance Prediction','StartGrowth','StartDecay2','StartRelapse2','Decay2Rate','Relapse2Rate'],axis=1).drop_duplicates()
+  final_params_df = new_df.reset_index().drop(['Day','Time','Phase','Rate','stderr','R2','Sample','ImageID','Average Radiance','Total Radiance','Average Radiance Prediction','Average Radiance Prediction (Max)','Average Radiance Prediction (Min)','StartGrowth','StartDecay2','StartRelapse2','Decay2Rate','Relapse2Rate'],axis=1).drop_duplicates()
   final_params_df = final_params_df.set_index(['Date','ExperimentName','Researcher','CAR_Binding','CAR_Costimulatory','Tumor','TumorCellNumber','TCellNumber','bloodDonorID','Perturbation','Categories','Group','MouseID']).sort_values(by='MouseID')
   return final_params_df
 
